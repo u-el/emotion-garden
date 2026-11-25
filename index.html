@@ -122,9 +122,20 @@ canvas { display: block; width: 100%; cursor: pointer; touch-action: manipulatio
 .time-chip { top: 12px; right: 12px; }
 .season-chip { top: 50px; }
 .music-chip { top: 88px; }
+.full-chip { top: 126px; }
+.full-water { left: 12px; bottom: 14px; padding: 8px 14px; font-weight: 600; color: #1d5fa8; }
+#garden3d.full { position: fixed; inset: 0; z-index: 50; height: 100%; min-height: 0; }
+#garden3d.full .time-chip { right: calc(12px + env(safe-area-inset-right, 0px)); margin-top: env(safe-area-inset-top, 0px); }
+#garden3d.full .exit-btn { left: calc(12px + env(safe-area-inset-left, 0px)); margin-top: env(safe-area-inset-top, 0px); }
+#garden3d.full .walk-tip { margin-top: env(safe-area-inset-top, 0px); }
+#garden3d.full .walk-btn { bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
+#garden3d.full .full-water { left: calc(12px + env(safe-area-inset-left, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
+#garden3d.full .joy { left: calc(16px + env(safe-area-inset-left, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+#garden3d.full .near { right: calc(12px + env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+@media (max-width: 420px) { #garden3d.full .walk-btn { left: auto; right: calc(12px + env(safe-area-inset-right, 0px)); transform: none; } }
 .vol { display: inline-flex; align-items: center; gap: 6px; }
 .vol input { width: 96px; accent-color: var(--accent); }
-#garden3d.walking { height: min(78vh, 620px); }
+#garden3d.walking:not(.full) { height: min(78vh, 620px); }
 .walk-btn { left: 50%; bottom: 14px; transform: translateX(-50%); padding: 8px 16px; font-weight: 600; white-space: nowrap; }
 .exit-btn { top: 12px; left: 12px; }
 .joy { position: absolute; left: 16px; bottom: 16px; z-index: 2; width: 108px; height: 108px; border-radius: 50%;
@@ -136,7 +147,7 @@ canvas { display: block; width: 100%; cursor: pointer; touch-action: manipulatio
 .near-date { font-size: 0.78rem; color: #4d5c54; }
 .near-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
 .near-actions button { padding: 4px 12px; font-size: 0.82rem; background: #fff; color: #23302a; border-color: #c9d5cb; }
-.walk-tip { left: 50%; top: 92px; transform: translateX(-50%); border-radius: 12px; padding: 8px 14px; text-align: center; width: max-content; max-width: calc(100% - 40px); transition: opacity 0.6s; }
+.walk-tip { left: 50%; top: 172px; transform: translateX(-50%); border-radius: 12px; padding: 8px 14px; text-align: center; width: max-content; max-width: calc(100% - 40px); transition: opacity 0.6s; }
 .hint { font-size: 0.82rem; color: var(--muted); margin: 0; }
 .stages { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.82rem; color: var(--muted); }
 
@@ -262,6 +273,8 @@ dialog::backdrop { background: rgba(10, 16, 14, 0.45); }
         <button type="button" class="time-chip" id="time-btn"></button>
         <button type="button" class="time-chip season-chip" id="season-btn"></button>
         <button type="button" class="time-chip music-chip" id="music-chip" aria-label="음악 켜기">🔇 음악</button>
+        <button type="button" class="time-chip full-chip" id="full-btn" aria-pressed="false">⛶ 크게</button>
+        <button type="button" class="glass full-water" id="full-water" hidden>💧 물 주기</button>
         <button type="button" class="glass walk-btn" id="walk-btn">🚶 정원 안으로 산책하기</button>
         <button type="button" class="glass exit-btn" id="exit-walk" hidden>⬆ 섬 위로 돌아가기</button>
         <div class="joy" id="joy" hidden aria-label="걷기 조이스틱"><div class="knob" id="knob"></div></div>
@@ -1522,6 +1535,7 @@ ${lines}
       });
       for (const [id, p] of plants) if (!seen.has(id)) { world.remove(p.group); if (p.drop) world.remove(p.drop); plants.delete(id); }
       firstSync = false;
+      syncFullWater();
       mailUnread = list.filter(e => e.letter && !e.letter.read && !e.example).length;
       if (mailFlag) mailFlag.rotation.z = mailUnread ? 0 : -Math.PI / 2;
       if (mailEnvelope) mailEnvelope.visible = mailUnread > 0;
@@ -1576,7 +1590,7 @@ ${lines}
       $("walk-btn").hidden = true;
       scene.fog = new T.Fog(new T.Color(SKIES[skyKey].bottom), 5, islandR * 3 + 6);
       startTransition(new T.Vector3(walker.x, EYE, walker.z), eyeQuat(walker.yaw, walker.pitch), 62, () => {
-        mode = "walk"; $("exit-walk").hidden = false; $("joy").hidden = false;
+        mode = "walk"; $("exit-walk").hidden = false; $("joy").hidden = false; syncFullWater();
         showTip(matchMedia("(pointer: coarse)").matches ? "왼쪽 아래 동그라미로 걷고, 화면을 끌어서 둘러봐요" : "WASD나 방향키로 걷고, 마우스로 끌어서 둘러봐요");
       });
     }
@@ -1585,10 +1599,32 @@ ${lines}
       $("exit-walk").hidden = true; $("joy").hidden = true; $("near").hidden = true; nearId = null; keys.clear(); joyVec.x = joyVec.y = 0;
       startTransition(orbitSaved.pos, orbitSaved.quat, orbitSaved.fov, () => {
         mode = "orbit"; scene.fog = null; host.classList.remove("walking"); resize();
-        controls.enabled = true; controls.update(); $("walk-btn").hidden = false;
+        controls.enabled = true; controls.update(); $("walk-btn").hidden = false; syncFullWater();
       });
     }
     $("walk-btn").addEventListener("click", enterWalk);
+    // full-screen garden: CSS fills the view everywhere; the Fullscreen API is a bonus where the browser allows it
+    let full = false, nativeFull = false;
+    function setFull(v) {
+      if (v === full) return;
+      full = v; host.classList.toggle("full", v);
+      document.documentElement.style.overflow = v ? "hidden" : "";
+      $("full-btn").textContent = v ? "✕ 작게" : "⛶ 크게"; $("full-btn").setAttribute("aria-pressed", String(v));
+      syncFullWater();
+      if (v && host.requestFullscreen) host.requestFullscreen({ navigationUI: "hide" }).then(() => { nativeFull = true; }, () => {});
+      if (!v && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      if (!v) nativeFull = false;
+      resize();
+    }
+    $("full-btn").addEventListener("click", () => setFull(!full));
+    document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && nativeFull) { nativeFull = false; setFull(false); } });
+    addEventListener("keydown", ev => { if (ev.code === "Escape" && full && mode === "orbit" && !document.querySelector("dialog[open]")) setFull(false); });
+    function syncFullWater() {
+      const n = entries.filter(needsWater).length, b = $("full-water");
+      b.hidden = !(full && mode === "orbit" && n > 0);
+      b.textContent = `💧 물 주기 · ${n}그루`;
+    }
+    $("full-water").addEventListener("click", () => $("water-all").click());
     $("exit-walk").addEventListener("click", exitWalk);
     let tipTimer;
     function showTip(t) { const el = $("walk-tip"); el.textContent = t; el.hidden = false; el.style.opacity = 1; clearTimeout(tipTimer); tipTimer = setTimeout(() => { el.style.opacity = 0; setTimeout(() => { el.hidden = true; }, 600); }, 4200); }
