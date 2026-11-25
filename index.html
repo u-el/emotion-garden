@@ -115,11 +115,12 @@ canvas { display: block; width: 100%; cursor: pointer; touch-action: manipulatio
   background: rgba(255, 255, 255, 0.78); color: #23302a; border: 1px solid rgba(255, 255, 255, 0.9); backdrop-filter: blur(6px);
 }
 .time-chip { top: 12px; right: 12px; }
+.season-chip { top: 50px; }
 #garden3d.walking { height: min(78vh, 620px); }
 .walk-btn { left: 50%; bottom: 14px; transform: translateX(-50%); padding: 8px 16px; font-weight: 600; white-space: nowrap; }
 .exit-btn { top: 12px; left: 12px; }
 .joy { position: absolute; left: 16px; bottom: 16px; z-index: 2; width: 108px; height: 108px; border-radius: 50%;
-  background: rgba(255, 255, 255, 0.28); border: 1.5px solid rgba(255, 255, 255, 0.75); touch-action: none; }
+  background: rgba(35, 48, 42, 0.16); border: 1.5px solid rgba(255, 255, 255, 0.85); box-shadow: 0 0 0 1px rgba(35, 48, 42, 0.25); touch-action: none; }
 .knob { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%;
   background: rgba(255, 255, 255, 0.9); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); pointer-events: none; }
 .near { right: 12px; bottom: 16px; left: 140px; border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; max-width: 280px; margin-left: auto; }
@@ -127,7 +128,7 @@ canvas { display: block; width: 100%; cursor: pointer; touch-action: manipulatio
 .near-date { font-size: 0.78rem; color: #4d5c54; }
 .near-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
 .near-actions button { padding: 4px 12px; font-size: 0.82rem; background: #fff; color: #23302a; border-color: #c9d5cb; }
-.walk-tip { left: 50%; top: 56px; transform: translateX(-50%); border-radius: 12px; padding: 8px 14px; text-align: center; width: max-content; max-width: calc(100% - 40px); transition: opacity 0.6s; }
+.walk-tip { left: 50%; top: 92px; transform: translateX(-50%); border-radius: 12px; padding: 8px 14px; text-align: center; width: max-content; max-width: calc(100% - 40px); transition: opacity 0.6s; }
 .hint { font-size: 0.82rem; color: var(--muted); margin: 0; }
 .stages { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.82rem; color: var(--muted); }
 
@@ -206,6 +207,7 @@ dialog::backdrop { background: rgba(10, 16, 14, 0.45); }
     <div class="canvas-box">
       <div id="garden3d" hidden aria-label="미니어처 감정 정원. 드래그해서 돌려 보고, 식물을 누르면 그날의 일기가 열려요.">
         <button type="button" class="time-chip" id="time-btn"></button>
+        <button type="button" class="time-chip season-chip" id="season-btn"></button>
         <button type="button" class="glass walk-btn" id="walk-btn">🚶 정원 안으로 산책하기</button>
         <button type="button" class="glass exit-btn" id="exit-walk" hidden>⬆ 섬 위로 돌아가기</button>
         <div class="joy" id="joy" hidden aria-label="걷기 조이스틱"><div class="knob" id="knob"></div></div>
@@ -762,6 +764,14 @@ ${text}
     night: { top: "#0a1124", bottom: "#253350", sun: "#9fb4ff", sunI: 0.35, hs: "#5a6c9c", hg: "#1c1c26", hi: 0.7, night: true, label: "🌙 밤 정원" },
   };
   const SKY_ORDER = ["dawn", "day", "dusk", "night"];
+  const SEASONS = {
+    spring: { label: "🌸 봄", grass: "#9ec488", tuft: "#86b56c", canopy: ["#f7c4d4", "#f2adc4", "#fbd8e3", "#f5bccf"], fall: "petal" },
+    summer: { label: "🌿 여름", grass: "#77b465", tuft: "#5c9c50", canopy: ["#4f9a4f", "#62af59", "#3f8a45", "#57a352"], fall: "fluff" },
+    autumn: { label: "🍂 가을", grass: "#b5ab72", tuft: "#9c8c52", canopy: ["#d9572f", "#e8913a", "#c8402c", "#f0b53c"], fall: "leaf" },
+    winter: { label: "❄️ 겨울", grass: "#edf2f4", tuft: "#d8e1e4", canopy: null, fall: "snow" },
+  };
+  const SEASON_ORDER = ["spring", "summer", "autumn", "winter"];
+  function seasonForNow() { const m = new Date().getMonth() + 1; return m >= 3 && m <= 5 ? "spring" : m <= 8 && m >= 6 ? "summer" : m >= 9 && m <= 11 ? "autumn" : "winter"; }
   function skyForNow() { const h = new Date().getHours(); return h >= 5 && h < 7 ? "dawn" : h >= 7 && h < 17 ? "day" : h >= 17 && h < 19 ? "dusk" : "night"; }
 
   function initGarden3D() {
@@ -801,15 +811,15 @@ ${text}
       return matCache.get(key);
     };
     const mesh = (geo, m, shadow = true) => { const o = new T.Mesh(geo, m); o.castShadow = shadow; o.receiveShadow = true; return o; };
-    const LEAF = "#5b8a5e", SOIL = "#7a634a", SOIL_DARK = "#5e4a37", GRASS = "#86b37a", STONE = "#a7a69b";
+    const BARK = "#6b4f3a", LEAF = "#5b8a5e", SOIL = "#7a634a", SOIL_DARK = "#5e4a37", GRASS = "#86b37a", STONE = "#a7a69b";
     const rnd = (seed) => { let s = Math.floor(hash(seed) * 2 ** 31) || 1; return () => (s = (s * 16807) % 2147483647) / 2147483647; };
 
     // ---- island ----
     const world = new T.Group(); scene.add(world);
-    let island = null, islandR = 0; const pathStones = [];
+    let island = null, islandR = 0; const pathStones = [], canopies = [], snowCaps = [], obstacles = [];
     function buildIsland(R) {
       if (island) { world.remove(island); island.traverse(o => o.geometry && o.geometry.dispose()); }
-      island = new T.Group(); islandR = R; pathStones.length = 0;
+      island = new T.Group(); islandR = R; pathStones.length = 0; canopies.length = 0; snowCaps.length = 0; obstacles.length = 0;
       const r = rnd("island" + R);
       const top = new T.CylinderGeometry(R, R * 0.97, 0.35, 64, 1);
       const grass = mesh(top, mat(GRASS, { flatShading: false }), false); grass.position.y = -0.17; island.add(grass);
@@ -837,10 +847,34 @@ ${text}
         const tuft = mesh(new T.ConeGeometry(0.05, 0.22 + r() * 0.15, 4), mat(i % 3 ? GRASS : LEAF), false);
         tuft.position.set(Math.cos(a) * d, 0.1, Math.sin(a) * d); tuft.rotation.z = (r() - 0.5) * 0.5; island.add(tuft);
       }
+      // two seasonal trees on the rim
+      for (const ta of [2.5, 4.1]) {
+        const tree = new T.Group(), td = R * 0.8;
+        tree.position.set(Math.cos(ta) * td, 0, Math.sin(ta) * td);
+        const trunk = mesh(new T.CylinderGeometry(0.1, 0.16, 1.7, 6), mat(BARK)); trunk.position.y = 0.85; tree.add(trunk);
+        const ends = [];
+        for (let b = 0; b < 4; b++) {
+          const ba = b * 1.57 + r() * 0.5, len = 0.7 + r() * 0.3;
+          const br = mesh(new T.CylinderGeometry(0.035, 0.06, len, 5), mat(BARK));
+          br.position.set(Math.cos(ba) * len * 0.3, 1.45 + b * 0.12, Math.sin(ba) * len * 0.3);
+          br.rotation.set(Math.sin(ba) * 0.8, 0, -Math.cos(ba) * 0.8); tree.add(br);
+          ends.push(new T.Vector3(Math.cos(ba) * len * 0.6, 1.7 + b * 0.12 + len * 0.3, Math.sin(ba) * len * 0.6));
+        }
+        ends.push(new T.Vector3(0, 2.25, 0));
+        ends.forEach((v, i) => {
+          const cn = mesh(new T.IcosahedronGeometry(0.45 + r() * 0.25, 0), mat("#ffffff")); cn.position.copy(v); cn.rotation.set(r(), r(), r());
+          cn.userData.canopy = i; canopies.push(cn); tree.add(cn);
+          const cap = mesh(new T.SphereGeometry(0.12, 6, 4), mat("#f7fafb")); cap.scale.set(1.6, 0.45, 1.6); cap.position.set(v.x * 0.85, v.y - 0.2, v.z * 0.85);
+          snowCaps.push(cap); tree.add(cap);
+        });
+        const trunkCap = mesh(new T.SphereGeometry(0.11, 6, 4), mat("#f7fafb")); trunkCap.scale.y = 0.4; trunkCap.position.y = 2.0; snowCaps.push(trunkCap); tree.add(trunkCap);
+        obstacles.push({ x: tree.position.x, z: tree.position.z, r: 0.45 });
+        island.add(tree);
+      }
       // stone lantern on the rim
       const lantern = new T.Group();
       const la = 0.9, ld = R * 0.82;
-      lantern.position.set(Math.cos(la) * ld, 0, Math.sin(la) * ld);
+      lantern.position.set(Math.cos(la) * ld, 0, Math.sin(la) * ld); obstacles.push({ x: lantern.position.x, z: lantern.position.z, r: 0.4 });
       const p1 = mesh(new T.CylinderGeometry(0.28, 0.34, 0.16, 6), mat(STONE)); p1.position.y = 0.08;
       const p2 = mesh(new T.CylinderGeometry(0.09, 0.11, 0.7, 6), mat(STONE)); p2.position.y = 0.5;
       const p3 = mesh(new T.CylinderGeometry(0.24, 0.2, 0.1, 6), mat(STONE)); p3.position.y = 0.9;
@@ -1020,6 +1054,57 @@ ${text}
     $("time-btn").addEventListener("click", () => { skyManual = true; skyKey = SKY_ORDER[(SKY_ORDER.indexOf(skyKey) + 1) % 4]; applySky(); });
     setInterval(() => { if (!skyManual && skyForNow() !== skyKey) { skyKey = skyForNow(); applySky(); } }, 60000);
 
+    // ---- seasons ----
+    let seasonKey = seasonForNow(), seasonManual = false, fall = null;
+    const fallData = [];
+    const dummy = new T.Object3D();
+    function buildFall() {
+      if (fall) { scene.remove(fall); fall.geometry.dispose(); fall.material.dispose(); fall = null; }
+      const kind = SEASONS[seasonKey].fall, R = islandR || 6, n = Math.round(clamp(R * 16, 70, 180));
+      const geo = kind === "snow" ? new T.SphereGeometry(0.035, 5, 4) : kind === "fluff" ? new T.SphereGeometry(0.03, 5, 4) : new T.PlaneGeometry(kind === "leaf" ? 0.16 : 0.11, kind === "leaf" ? 0.12 : 0.08);
+      const m = new T.MeshStandardMaterial({ color: 0xffffff, side: T.DoubleSide, roughness: 0.8, transparent: kind === "fluff", opacity: kind === "fluff" ? 0.85 : 1, emissive: kind === "snow" || kind === "fluff" ? 0x445566 : 0x000000 });
+      fall = new T.InstancedMesh(geo, m, n);
+      const rr = rnd("fall" + seasonKey); fallData.length = 0;
+      const cols = kind === "leaf" ? SEASONS.autumn.canopy : kind === "petal" ? ["#f9c9d8", "#f5b3c8", "#ffe1ea"] : ["#ffffff"];
+      for (let i = 0; i < n; i++) {
+        const a = rr() * 6.283, d = Math.sqrt(rr()) * (R + 1);
+        fallData.push({ x: Math.cos(a) * d, z: Math.sin(a) * d, y: rr() * 7, p: rr() * 6.28, sp: 0.6 + rr() * 0.8, rx: rr() * 6, ry: rr() * 6 });
+        fall.setColorAt(i, new T.Color(cols[i % cols.length]));
+      }
+      fall.instanceColor.needsUpdate = true;
+      fall.userData.kind = kind;
+      scene.add(fall); stepFall(0, 0);
+    }
+    function stepFall(dt, now) {
+      if (!fall) return;
+      const kind = fall.userData.kind, R = (islandR || 6) + 1, still = reduce.matches;
+      const vy = kind === "snow" ? -0.55 : kind === "leaf" ? -0.42 : kind === "petal" ? -0.3 : 0.1;
+      for (let i = 0; i < fallData.length; i++) {
+        const f = fallData[i];
+        if (!still) {
+          f.y += vy * f.sp * dt;
+          const sway = kind === "snow" ? 0.15 : kind === "fluff" ? 0.12 : 0.45;
+          f.x += Math.sin(now / 1100 + f.p) * sway * dt; f.z += Math.cos(now / 1300 + f.p) * sway * dt;
+          f.rx += dt * 2.2 * f.sp; f.ry += dt * 1.6;
+          if (kind === "fluff" ? f.y > 6 : f.y < -0.05) { const a = f.p * 7 + now / 997, d = Math.sqrt((Math.sin(now + i) + 1) / 2) * R; f.x = Math.cos(a) * d; f.z = Math.sin(a) * d; f.y = kind === "fluff" ? 0.1 : 6.5 + Math.random(); }
+        }
+        dummy.position.set(f.x, f.y, f.z); dummy.rotation.set(f.rx, f.ry, f.rx * 0.5); dummy.updateMatrix();
+        fall.setMatrixAt(i, dummy.matrix);
+      }
+      fall.instanceMatrix.needsUpdate = true;
+    }
+    function applySeason() {
+      const se = SEASONS[seasonKey];
+      mat(GRASS, { flatShading: false }).color.set(se.grass);
+      mat(GRASS).color.set(se.tuft);
+      for (const c of canopies) { c.visible = !!se.canopy; if (se.canopy) c.material = mat(se.canopy[c.userData.canopy % se.canopy.length]); }
+      for (const c of snowCaps) c.visible = !se.canopy;
+      $("season-btn").textContent = se.label;
+      buildFall();
+    }
+    $("season-btn").addEventListener("click", () => { seasonManual = true; seasonKey = SEASON_ORDER[(SEASON_ORDER.indexOf(seasonKey) + 1) % 4]; applySeason(); });
+    setInterval(() => { if (!seasonManual && seasonForNow() !== seasonKey) { seasonKey = seasonForNow(); applySeason(); } }, 60000);
+
     // ---- sync plants with entries ----
     const PS = 1.5;
     const plants = new Map(); // id -> {group, key, drop, phase, grow}
@@ -1028,7 +1113,7 @@ ${text}
       const sorted = [...list].sort((a, b) => (a.date + String(a.createdAt || 0).padStart(15, "0")).localeCompare(b.date + String(b.createdAt || 0).padStart(15, "0")));
       const spacing = 1.7;
       const R = Math.max(4.5, Math.ceil(spacing * Math.sqrt(sorted.length + 1) + 1.8));
-      if (R !== islandR) { buildIsland(R); buildFlies(R); }
+      if (R !== islandR) { buildIsland(R); buildFlies(R); applySeason(); }
       const seen = new Set();
       sorted.forEach((e, i) => {
         seen.add(e.id);
@@ -1095,7 +1180,7 @@ ${text}
       if (mode !== "orbit") return;
       orbitSaved = { pos: camera.position.clone(), quat: camera.quaternion.clone(), fov: camera.fov };
       controls.enabled = false; controls.autoRotate = false;
-      const a = -0.6, rad = islandR * 0.9;
+      const a = -0.6 + 0.32, rad = islandR * 0.88; // just beside the stepping stones
       walker.x = Math.cos(a) * rad; walker.z = Math.sin(a) * rad; walker.yaw = Math.atan2(walker.x, walker.z); walker.pitch = -0.03;
       host.classList.add("walking"); resize();
       $("walk-btn").hidden = true;
@@ -1197,6 +1282,10 @@ ${text}
           const dx = walker.x - p.group.position.x, dz = walker.z - p.group.position.z, d = Math.hypot(dx, dz), min = 0.42;
           if (d < min && d > 1e-4) { walker.x = p.group.position.x + dx / d * min; walker.z = p.group.position.z + dz / d * min; }
         }
+        for (const o of obstacles) {
+          const dx = walker.x - o.x, dz = walker.z - o.z, d = Math.hypot(dx, dz);
+          if (d < o.r && d > 1e-4) { walker.x = o.x + dx / d * o.r; walker.z = o.z + dz / d * o.r; }
+        }
         const rr = Math.hypot(walker.x, walker.z), lim = islandR * 0.93;
         if (rr > lim) { walker.x *= lim / rr; walker.z *= lim / rr; }
       }
@@ -1232,6 +1321,7 @@ ${text}
         f.material.opacity = still ? 0.8 : 0.35 + 0.65 * Math.max(0, Math.sin(now / 700 + u.p * 3));
       }
       const dt = Math.min(0.05, (now - (lastNow || now)) / 1000); lastNow = now;
+      stepFall(dt, now);
       if (mode === "orbit") controls.update(); else if (mode === "walk") stepWalk(dt, now); else stepTransition(now);
       renderer.render(scene, camera);
     }
