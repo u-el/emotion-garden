@@ -180,6 +180,13 @@ dialog::backdrop { background: rgba(10, 16, 14, 0.45); }
 .letter-item .when { font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .letter-item .peek { grid-column: 2 / 4; font-size: 0.85rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .empty { font-size: 0.88rem; color: var(--muted); margin: 0; }
+.bday-banner { flex-direction: row; align-items: center; flex-wrap: wrap; border-color: var(--stamp); background: var(--paper); color: var(--ink); }
+.bday-cake { font-size: 2rem; }
+.bday-text { flex: 1; min-width: 12em; }
+.bday-text .hint { color: var(--ink); opacity: 0.8; }
+.bday-card { display: flex; align-items: center; gap: 14px; }
+.bday-flower { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; font-size: 1.8rem; background: var(--bg); flex: none; }
+select { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; }
 .week-nav { display: flex; align-items: center; gap: 8px; }
 .week-nav button { padding: 4px 12px; }
 .week-range { font-variant-numeric: tabular-nums; font-size: 0.92rem; min-width: 9.5em; text-align: center; }
@@ -225,6 +232,15 @@ dialog::backdrop { background: rgba(10, 16, 14, 0.45); }
     <h1>감정정원</h1>
     <p class="lede">오늘 있었던 일과 마음을 적으면, 정원지기가 감정을 읽고 어울리는 씨앗을 골라줘요. 하루에 한 번 물을 주면 씨앗이 사흘에 걸쳐 꽃으로 자라요.</p>
   </header>
+
+  <section class="panel bday-banner" id="bday-banner" hidden aria-live="polite">
+    <div class="bday-cake" aria-hidden="true">🎂</div>
+    <div class="bday-text">
+      <h2 id="bday-banner-title">생일 축하해요</h2>
+      <p class="hint" id="bday-banner-sub"></p>
+    </div>
+    <button type="button" class="primary" id="bday-banner-btn">편지 읽기</button>
+  </section>
 
   <section class="panel" id="write-panel" aria-labelledby="write-title">
     <div class="panel-head">
@@ -296,6 +312,38 @@ dialog::backdrop { background: rgba(10, 16, 14, 0.45); }
     </div>
     <div class="stages"><span>씨앗 → 새싹 → 꽃봉오리 → 꽃</span><span>💧 표시는 오늘 물이 필요한 식물이에요</span></div>
     <p class="hint" id="garden-hint">식물을 누르면 그날의 일기를 다시 읽을 수 있어요. 세기가 강한 감정일수록 크게 자라요.</p>
+  </section>
+
+  <section class="panel" aria-labelledby="bday-title">
+    <div class="panel-head">
+      <h2 id="bday-title">나의 생일꽃</h2>
+      <span class="stat" id="bday-stat"></span>
+    </div>
+    <div id="bday-view" hidden>
+      <div class="bday-card">
+        <div class="bday-flower" id="bday-flower-icon" aria-hidden="true"></div>
+        <div>
+          <div class="seed-name" id="bday-flower-name"></div>
+          <div class="hint" id="bday-flower-lang"></div>
+        </div>
+      </div>
+      <p class="hint" id="bday-flower-where">정원 옆에 떠 있는 작은 생일꽃 섬에 피어 있어요. 생일이 있는 달에는 반짝반짝 빛나요.</p>
+      <div class="row"><button type="button" class="ghost" id="bday-edit">생일 바꾸기</button></div>
+    </div>
+    <div id="bday-form" hidden>
+      <p class="hint">생일이 있는 달을 고르면 그 달의 탄생화가 정원 옆 작은 섬에 피어요. 날짜까지 알려주면 생일날 정원지기가 편지를 보내요.</p>
+      <div class="row">
+        <label class="label" for="bday-month">생일 달</label>
+        <select id="bday-month"></select>
+        <label class="label" for="bday-day">날짜</label>
+        <select id="bday-day"></select>
+      </div>
+      <div class="row">
+        <button type="button" class="primary" id="bday-save">생일꽃 심기</button>
+        <button type="button" class="ghost" id="bday-cancel" hidden>그만두기</button>
+        <span class="msg" id="bday-msg" role="status"></span>
+      </div>
+    </div>
   </section>
 
   <section class="panel" aria-labelledby="week-title">
@@ -437,16 +485,17 @@ dialog::backdrop { background: rgba(10, 16, 14, 0.45); }
   { const d = new Date(); $("today-label").textContent = `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`; }
 
   // ---------- Storage: private db rows, else this browser ----------
-  let entries = [], weeks = {}, store = null, sample = null, sampleChecked = false;
-  const LS_KEY = "emotion-garden-v1", LS_WEEKS = "emotion-garden-weeks-v1";
+  let entries = [], weeks = {}, profile = null, store = null, sample = null, sampleChecked = false;
+  const LS_KEY = "emotion-garden-v1", LS_WEEKS = "emotion-garden-weeks-v1", LS_PROFILE = "emotion-garden-profile-v1";
   const localStore = {
     kind: "local",
-    load() { try { entries = JSON.parse(localStorage.getItem(LS_KEY) || "[]").map(migrate); } catch (e) { entries = []; } try { weeks = JSON.parse(localStorage.getItem(LS_WEEKS) || "{}"); } catch (e) { weeks = {}; } render(); },
+    load() { try { entries = JSON.parse(localStorage.getItem(LS_KEY) || "[]").map(migrate); } catch (e) { entries = []; } try { weeks = JSON.parse(localStorage.getItem(LS_WEEKS) || "{}"); } catch (e) { weeks = {}; } try { profile = JSON.parse(localStorage.getItem(LS_PROFILE) || "null"); } catch (e) { profile = null; } render(); },
     save() { try { localStorage.setItem(LS_KEY, JSON.stringify(entries)); } catch (e) {} },
     async add(e) { entries.push(e); this.save(); render(); },
     async update(id, patch) { entries = entries.map(x => x.id === id ? { ...x, ...patch } : x); this.save(); render(); },
     async remove(id) { entries = entries.filter(x => x.id !== id); this.save(); render(); },
     async setWeek(id, data) { weeks[id] = data; try { localStorage.setItem(LS_WEEKS, JSON.stringify(weeks)); } catch (e) {} render(); },
+    async setProfile(data) { profile = data; try { localStorage.setItem(LS_PROFILE, JSON.stringify(profile)); } catch (e) {} render(); },
   };
   async function initStore() {
     const c = window.claude;
@@ -464,14 +513,16 @@ dialog::backdrop { background: rgba(10, 16, 14, 0.45); }
         async update(id, patch) { entries = entries.map(x => x.id === id ? { ...x, ...patch } : x); render(); await col.doc(id).update(patch); },
         async remove(id) { entries = entries.filter(x => x.id !== id); render(); await col.doc(id).delete(); },
         async setWeek(id, data) { weeks[id] = data; render(); await col.doc(id).set({ kind: "week", ...data }); },
+        async setProfile(data) { profile = data; render(); await col.doc("profile").set({ kind: "profile", ...data }); },
       };
       let settled = false;
       const timer = setTimeout(() => { if (!settled) { settled = true; render(); } }, 10000);
       col.onSnapshot(snap => {
         settled = true; clearTimeout(timer);
         const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        entries = all.filter(x => x.kind !== "week").map(migrate);
+        entries = all.filter(x => !x.kind).map(migrate);
         weeks = Object.fromEntries(all.filter(x => x.kind === "week").map(({ id, kind, ...w }) => [id, w]));
+        { const pr = all.find(x => x.kind === "profile"); if (pr) { const { id, kind, ...rest } = pr; profile = rest; } else profile = null; }
         render();
       }, () => { settled = true; clearTimeout(timer); setMsg($("garden-msg"), "정원을 불러오지 못했어요. 잠시 후 다시 열어 주세요.", "err"); });
     } catch (e) { store = localStore; store.load(); }
@@ -482,7 +533,7 @@ dialog::backdrop { background: rgba(10, 16, 14, 0.45); }
   $("backup-btn").addEventListener("click", async () => {
     const msg = $("backup-msg");
     if (!entries.length) { setMsg(msg, "아직 심은 식물이 없어요.", ""); return; }
-    const data = JSON.stringify({ app: "감정정원", version: 1, exportedAt: new Date().toISOString(), entries, weeks }, null, 2);
+    const data = JSON.stringify({ app: "감정정원", version: 1, exportedAt: new Date().toISOString(), entries, weeks, profile }, null, 2);
     try { await downloads.save({ filename: `감정정원-백업-${today()}.json`, data }); setMsg(msg, `${entries.length}그루의 기록을 저장했어요.`, "ok"); }
     catch (e) { setMsg(msg, e && e.code === "cancelled" ? "" : "파일을 저장하지 못했어요. 다시 시도해 주세요.", e && e.code === "cancelled" ? "" : "err"); }
   });
@@ -491,7 +542,7 @@ dialog::backdrop { background: rgba(10, 16, 14, 0.45); }
     if (!file) return;
     let list;
     let wk = {};
-    try { const j = JSON.parse(await file.text()); list = Array.isArray(j) ? j : j.entries; if (!Array.isArray(list)) throw 0; if (j && j.weeks && typeof j.weeks === "object") wk = j.weeks; }
+    try { const j = JSON.parse(await file.text()); list = Array.isArray(j) ? j : j.entries; if (!Array.isArray(list)) throw 0; if (j && j.weeks && typeof j.weeks === "object") wk = j.weeks; if (j && j.profile && !profile && Number(j.profile.birthMonth) >= 1 && Number(j.profile.birthMonth) <= 12) { const bm = Number(j.profile.birthMonth), bd = Number(j.profile.birthDay) || null; try { await (store || localStore).setProfile({ birthMonth: bm, birthDay: bd && bd >= 1 && bd <= 31 ? bd : null, bdayLetters: typeof j.profile.bdayLetters === "object" && j.profile.bdayLetters ? j.profile.bdayLetters : {} }); } catch (e) {} } }
     catch (e) { setMsg(msg, "감정정원 백업 파일이 아니에요. 백업 받은 .json 파일을 골라 주세요.", "err"); return; }
     let added = 0, skipped = 0;
     for (const raw of list) {
@@ -740,7 +791,7 @@ ${care}번의 물을 주며 돌봐준 덕분에 오늘 꽃이 되었어요.
     $("letter-meta").textContent = `${md(ymd(new Date(e.letter.at)))}에 도착한 편지`;
     $("letter-title").textContent = `${iga(plantName(e.emotions[0].n))} 피었어요`;
     $("letter-stamp").textContent = { daisy: "🌼", tulip: "🌷", bell: "🔔", fern: "🌿", thorn: "🌵", moss: "🪨", willow: "🍃", vine: "🌺", sprout: "🌱" }[E[e.emotions[0].n][1]] || "🌸";
-    $("letter-body").textContent = e.letter.text;
+    $("letter-body").textContent = e.letter.text; $("letter-diary").hidden = false;
     if ($("sheet").open) $("sheet").close();
     $("letter").showModal();
     if (!e.letter.read) (store || localStore).update(e.id, { letter: { ...e.letter, read: true } }).catch(() => {});
@@ -754,6 +805,118 @@ ${care}번의 물을 주며 돌봐준 덕분에 오늘 꽃이 되었어요.
   $("letter-close").onclick = () => $("letter").close();
   $("letter").addEventListener("click", ev => { if (ev.target === $("letter")) $("letter").close(); });
   $("letter-diary").onclick = () => { const e = entries.find(x => x.id === letterId); $("letter").close(); if (e) openSheet(e); };
+  function showPaper(meta, title, stamp, body, withDiary) {
+    letterId = null;
+    $("letter-meta").textContent = meta; $("letter-title").textContent = title; $("letter-stamp").textContent = stamp; $("letter-body").textContent = body;
+    $("letter-diary").hidden = !withDiary;
+    if ($("sheet").open) $("sheet").close();
+    $("letter").showModal();
+  }
+
+  // ---------- Birthday flower ----------
+  const BIRTH = {
+    1: { name: "카네이션", lang: "사랑과 존경", icon: "🌸" },
+    2: { name: "제비꽃", lang: "겸손과 성실", icon: "💜" },
+    3: { name: "수선화", lang: "새로운 시작", icon: "🌼" },
+    4: { name: "데이지", lang: "순수와 희망", icon: "🌼" },
+    5: { name: "은방울꽃", lang: "다시 찾은 행복", icon: "🔔" },
+    6: { name: "장미", lang: "사랑과 아름다움", icon: "🌹" },
+    7: { name: "수련", lang: "청순한 마음", icon: "🪷" },
+    8: { name: "글라디올러스", lang: "굳은 결심", icon: "🌺" },
+    9: { name: "과꽃", lang: "추억", icon: "💐" },
+    10: { name: "코스모스", lang: "조화", icon: "🌸" },
+    11: { name: "국화", lang: "진실", icon: "🌼" },
+    12: { name: "포인세티아", lang: "축복", icon: "❤️" },
+  };
+  const isBirthMonth = () => !!profile && new Date().getMonth() + 1 === profile.birthMonth;
+  const isBirthday = () => !!profile && !!profile.birthDay && isBirthMonth() && new Date().getDate() === profile.birthDay;
+  function daysUntilBirthday() {
+    if (!profile || !profile.birthDay) return null;
+    const now = new Date(); now.setHours(0, 0, 0, 0);
+    let next = new Date(now.getFullYear(), profile.birthMonth - 1, profile.birthDay);
+    if (next < now) next = new Date(now.getFullYear() + 1, profile.birthMonth - 1, profile.birthDay);
+    return Math.round((next - now) / 86400000);
+  }
+  { const m = $("bday-month"), d = $("bday-day");
+    for (let i = 1; i <= 12; i++) { const o = document.createElement("option"); o.value = i; o.textContent = `${i}월 · ${BIRTH[i].name}`; m.append(o); }
+    const o0 = document.createElement("option"); o0.value = ""; o0.textContent = "모름"; d.append(o0);
+    for (let i = 1; i <= 31; i++) { const o = document.createElement("option"); o.value = i; o.textContent = `${i}일`; d.append(o); } }
+  let bdayEditing = false;
+  $("bday-edit").onclick = () => { bdayEditing = true; if (profile) { $("bday-month").value = profile.birthMonth; $("bday-day").value = profile.birthDay || ""; } renderBirthday(); };
+  $("bday-cancel").onclick = () => { bdayEditing = false; renderBirthday(); };
+  $("bday-save").onclick = async () => {
+    const m = Number($("bday-month").value), d = Number($("bday-day").value) || null;
+    if (d && d > new Date(2024, m, 0).getDate()) { setMsg($("bday-msg"), `${m}월에는 ${d}일이 없어요. 날짜를 다시 골라 주세요.`, "err"); return; }
+    try { await (store || localStore).setProfile({ birthMonth: m, birthDay: d, bdayLetters: (profile && profile.bdayLetters) || {} }); bdayEditing = false; renderBirthday(); setMsg($("bday-msg"), ""); Music.sfx("bloom"); if (g3d) g3d.tip(`${BIRTH[m].icon} ${iga(BIRTH[m].name)} 생일꽃 섬에 피었어요`); }
+    catch (e) { setMsg($("bday-msg"), "저장하지 못했어요. 다시 시도해 주세요.", "err"); }
+  };
+  function openBirthdayCard() {
+    if (!profile) { $("bday-title").scrollIntoView({ behavior: "smooth", block: "center" }); return; }
+    const b = BIRTH[profile.birthMonth], left = daysUntilBirthday();
+    const year = String(new Date().getFullYear()), letter = profile.bdayLetters && profile.bdayLetters[year];
+    if (isBirthday() && letter) { showPaper(`${md(today())} · 생일 편지`, "생일 축하해요 🎂", b.icon, letter.text, false); return; }
+    const when = left === null ? `${profile.birthMonth}월에 태어난 당신의 꽃이에요.` : left === 0 ? "오늘이 생일이에요! 🎂" : `생일까지 ${left}일 남았어요.`;
+    showPaper(`${profile.birthMonth}월의 탄생화`, b.name, b.icon, `꽃말: ${b.lang}\n\n${when}\n\n${isBirthMonth() ? "생일 달이라 꽃이 반짝반짝 빛나고 있어요." : "생일 달이 오면 꽃이 반짝반짝 빛나요."}`, false);
+  }
+  let bdayPending = false;
+  async function ensureBirthdayLetter() {
+    if (!isBirthday() || bdayPending || !store) return;
+    const year = String(new Date().getFullYear());
+    if (profile.bdayLetters && profile.bdayLetters[year]) return;
+    bdayPending = true;
+    const b = BIRTH[profile.birthMonth];
+    const recent = entries.filter(e => (Date.now() - new Date(e.date).getTime()) < 40 * 86400000);
+    const cnt = {}; for (const e of recent) for (const x of e.emotions) cnt[x.n] = (cnt[x.n] || 0) + 1;
+    const topE = Object.entries(cnt).sort((a, c) => c[1] - a[1]).slice(0, 3).map(([n]) => E[n][0]);
+    let text = "", ai = false;
+    if (sample) {
+      try {
+        const r = await sample(`너는 '감정정원'의 정원지기야. 오늘은 이 정원 주인의 생일이야. 짧은 생일 편지를 써줘.
+
+- 생일꽃: ${b.name} (꽃말: ${b.lang})
+- 최근 한 달 동안 자주 찾아온 감정: ${topE.length ? topE.join(", ") : "기록 없음"}
+- 지금까지 심은 씨앗: ${entries.length}그루
+
+규칙:
+- 존댓말로, 따뜻하고 담백하게. 4~6문장, 300자 이내.
+- 생일 축하로 시작하고, 생일꽃과 꽃말을 자연스럽게 엮어 줘.
+- 최근 감정은 가볍게만 짚고, 충고나 진단은 하지 마.
+- 머리말 없이 본문만 쓰고, 마지막 줄은 "— 감정정원의 정원지기"로 끝내.
+편지 본문만 답해.`, { modelTier: "default" });
+        text = String(r.text || "").trim(); ai = !!text;
+      } catch (err) { if (err && err.code === "not_granted") sample = null; }
+    }
+    if (!text) text = `생일 축하해요! 🎂
+
+오늘 생일꽃 섬의 ${iga(b.name)} 가장 환하게 피었어요. ${b.name}의 꽃말은 '${b.lang}'이래요.
+${entries.length ? `지금까지 ${entries.length}그루의 마음을 이 정원에 심어 주었지요. 어떤 마음이든 소중히 들여다봐 준 당신 덕분에 정원이 이만큼 자랐어요.` : "이 정원에서 당신의 마음들이 하나씩 꽃 피기를 기다리고 있어요."}
+오늘 하루는 당신을 위한 날이에요. 편안하고 따뜻한 하루 보내요.
+
+— 감정정원의 정원지기`;
+    try { await store.setProfile({ ...profile, bdayLetters: { ...(profile.bdayLetters || {}), [year]: { text: text.slice(0, 2000), at: Date.now(), ai } } }); setTimeout(() => Music.sfx("letter"), 600); }
+    catch (e) {} finally { bdayPending = false; }
+  }
+  $("bday-banner-btn").onclick = openBirthdayCard;
+  function renderBirthday() {
+    const has = !!profile && !bdayEditing;
+    $("bday-view").hidden = !has; $("bday-form").hidden = has;
+    $("bday-cancel").hidden = !profile;
+    $("bday-save").textContent = profile ? "바꾸기" : "생일꽃 심기";
+    if (profile) {
+      const b = BIRTH[profile.birthMonth], left = daysUntilBirthday();
+      $("bday-flower-icon").textContent = b.icon;
+      $("bday-flower-name").textContent = `${profile.birthMonth}월의 탄생화 · ${b.name}`;
+      $("bday-flower-lang").textContent = `꽃말: ${b.lang}`;
+      $("bday-stat").textContent = isBirthday() ? "오늘이 생일이에요 🎂" : left === null ? `${profile.birthMonth}월생` : `생일까지 ${left}일`;
+    } else $("bday-stat").textContent = "";
+    const year = String(new Date().getFullYear()), letter = profile && profile.bdayLetters && profile.bdayLetters[year];
+    $("bday-banner").hidden = !isBirthday();
+    if (isBirthday()) {
+      $("bday-banner-sub").textContent = letter ? `${iga(BIRTH[profile.birthMonth].name)} 활짝 피었어요. 정원지기의 생일 편지가 도착했어요.` : "정원지기가 생일 편지를 쓰고 있어요…";
+      $("bday-banner-btn").hidden = !letter;
+      ensureBirthdayLetter();
+    }
+  }
   // ---------- Weekly walk map ----------
   const MOODS = [
     { key: "bright", name: "밝음", fams: ["daisy", "tulip"], color: "#f0b53c" },
@@ -1553,6 +1716,133 @@ ${lines}
       return g;
     }
 
+    // ---- birthday flowers (one shape per month) ----
+    function petalRing(parent, n, len, wid, col, tilt, y = 0, off = 0, thick = 0.03) {
+      for (let i = 0; i < n; i++) {
+        const pv = new T.Group(); pv.rotation.y = i / n * 6.283 + off; pv.position.y = y;
+        const pt = mesh(new T.SphereGeometry(1, 14, 8), mat(col)); pt.scale.set(wid, thick, len);
+        pt.position.z = len * 0.85; pv.rotation.x = 0; const lift = new T.Group(); lift.rotation.x = -tilt; lift.add(pt); pv.add(lift); parent.add(pv);
+      }
+    }
+    function bladeLeaf(g, h, ang, col) { const l = mesh(new T.SphereGeometry(1, 12, 8), mat(col || LEAF)); l.scale.set(0.045, h, 0.012); l.position.set(Math.cos(ang) * 0.06, h * 0.9, Math.sin(ang) * 0.06); l.rotation.set(Math.sin(ang) * 0.25, 0, -Math.cos(ang) * 0.25); g.add(l); }
+    function buildBirthFlower(m) {
+      const g = new T.Group(); let top = 1.2;
+      const head = (h, tiltX = 0.3) => { const hd = new T.Group(); hd.position.y = h; hd.rotation.x = tiltX; g.add(hd); return hd; };
+      switch (m) {
+        case 1: { // carnation
+          g.add(stemTube(1.0, 0.06).m); addLeaf(g, 0.35, 1, 0.5); addLeaf(g, 0.55, 4, 0.45);
+          const hd = head(1.0, 0.2);
+          [[13, 0.15, 0.55], [12, 0.13, 0.85], [11, 0.11, 1.1], [9, 0.09, 1.35], [7, 0.06, 1.5]].forEach(([n, l, t], i) => petalRing(hd, n, l, l * 0.6, i % 2 ? "#f6a8c2" : "#ef7fa6", t, i * 0.03, i * 0.35, 0.028));
+          top = 1.2; break;
+        }
+        case 2: { // violets
+          for (const [x, z, h] of [[0, 0, 0.45], [0.18, 0.1, 0.35], [-0.15, 0.12, 0.3]]) {
+            const st = stemTube(h, 0.04, 0.02); st.m.position.set(x, 0, z); g.add(st.m);
+            const hd = new T.Group(); hd.position.set(x, h, z); hd.rotation.x = 1.1; g.add(hd);
+            petalRing(hd, 5, 0.08, 0.06, "#7b5bc4", 0.15); const c = mesh(new T.SphereGeometry(0.025, 8, 6), mat("#f6c431")); hd.add(c);
+          }
+          for (let i = 0; i < 5; i++) { const l = mesh(new T.SphereGeometry(1, 12, 8), mat(LEAF)); l.scale.set(0.12, 0.02, 0.1); l.position.set(Math.cos(i * 1.3) * 0.15, 0.06, Math.sin(i * 1.3) * 0.15); l.rotation.set(0.3, i * 1.3, 0); g.add(l); }
+          top = 0.6; break;
+        }
+        case 3: { // daffodil
+          g.add(stemTube(1.05, 0.05).m); for (const a of [0, 2.1, 4.2]) bladeLeaf(g, 0.4, a);
+          const hd = head(1.05, 1.25);
+          petalRing(hd, 6, 0.17, 0.08, "#fffaf0", 0.12);
+          const cup = mesh(new T.CylinderGeometry(0.075, 0.05, 0.12, 18, 1, true), mat("#f6c431", { side: T.DoubleSide })); cup.position.y = 0.06; hd.add(cup);
+          top = 1.2; break;
+        }
+        case 4: { // daisy
+          g.add(stemTube(0.95, 0.08).m); addLeaf(g, 0.3, 2, 0.45);
+          const hd = head(0.95, 0.35);
+          petalRing(hd, 18, 0.17, 0.035, "#ffffff", 0.08); petalRing(hd, 14, 0.13, 0.03, "#f6f2fa", 0.2, 0.01, 0.2);
+          const c = mesh(new T.SphereGeometry(0.07, 16, 10), mat("#f2c230")); c.scale.y = 0.55; hd.add(c);
+          top = 1.1; break;
+        }
+        case 5: { // lily of the valley
+          for (const a of [0.4, 3.5]) { const l = mesh(new T.SphereGeometry(1, 14, 8), mat(LEAF)); l.scale.set(0.13, 0.42, 0.03); l.position.set(Math.cos(a) * 0.08, 0.38, Math.sin(a) * 0.08); l.rotation.y = -a; l.rotation.z = Math.cos(a) * 0.15; g.add(l); }
+          const end = new T.Vector3(0.35, 0.8, 0), s2 = stemTube(0.85, -0.1, 0.018, end); g.add(s2.m);
+          for (let i = 0; i < 6; i++) { const p = s2.curve.getPoint(0.4 + i * 0.1); const b = mesh(new T.SphereGeometry(0.045, 12, 10, 0, 6.29, 0, 2.1), mat("#fbfbf6", { side: T.DoubleSide })); b.rotation.x = Math.PI; b.position.set(p.x, p.y - 0.06, p.z); g.add(b); }
+          top = 0.95; break;
+        }
+        case 6: { // rose
+          g.add(stemTube(1.0, 0.05).m); addLeaf(g, 0.4, 1.4, 0.45); addLeaf(g, 0.6, 4.3, 0.4);
+          const hd = head(1.0, 0.15);
+          const bud = mesh(new T.SphereGeometry(0.06, 14, 10), mat("#b81f37")); bud.scale.y = 1.4; bud.position.y = 0.06; hd.add(bud);
+          [[5, 0.07, 1.35], [6, 0.1, 1.1], [7, 0.13, 0.8], [8, 0.15, 0.5]].forEach(([n, l, t], i) => petalRing(hd, n, l, l * 0.8, i < 2 ? "#c8283f" : "#d63a4f", t, 0.02 - i * 0.01, i * 0.5, 0.03));
+          top = 1.2; break;
+        }
+        case 7: { // water lily on a little pond
+          const pond = mesh(new T.CylinderGeometry(0.55, 0.55, 0.04, 32), new T.MeshStandardMaterial({ color: lin("#4f8fc4"), roughness: 0.15, metalness: 0.2 })); pond.position.y = 0.02; g.add(pond);
+          for (const [x, z, r] of [[0.25, 0.15, 0.16], [-0.22, -0.18, 0.13], [0.05, -0.3, 0.1]]) { const pad = mesh(new T.CylinderGeometry(r, r, 0.015, 20, 1, false, 0.3, 5.8), mat("#5f9e5a")); pad.position.set(x, 0.05, z); g.add(pad); }
+          const hd = new T.Group(); hd.position.set(-0.05, 0.06, 0.05); g.add(hd);
+          petalRing(hd, 8, 0.13, 0.05, "#f7b8cf", 0.35); petalRing(hd, 8, 0.11, 0.045, "#f4a0bf", 0.75, 0.02, 0.4);
+          const c = mesh(new T.SphereGeometry(0.04, 12, 8), mat("#f2c230")); c.position.y = 0.04; hd.add(c);
+          top = 0.4; break;
+        }
+        case 8: { // gladiolus
+          g.add(stemTube(1.45, 0.04).m); for (const a of [0.5, 2.6, 4.7]) bladeLeaf(g, 0.6, a);
+          for (let i = 0; i < 7; i++) { const y = 0.75 + i * 0.1, sz = 0.11 - i * 0.008, side = i % 2 ? 1 : -1;
+            const hd = new T.Group(); hd.position.set(side * 0.05, y, 0); hd.rotation.set(1.2, 0, side * 0.5); g.add(hd);
+            petalRing(hd, 5, sz, sz * 0.7, i % 2 ? "#f06a4a" : "#f4825f", 0.4, 0, i); }
+          top = 1.55; break;
+        }
+        case 9: { // aster
+          g.add(stemTube(0.95, 0.06).m); addLeaf(g, 0.4, 1.8, 0.4);
+          const hd = head(0.95, 0.3);
+          petalRing(hd, 26, 0.16, 0.022, "#9a6ad6", 0.1); petalRing(hd, 20, 0.12, 0.02, "#b48ae6", 0.3, 0.01, 0.15);
+          const c = mesh(new T.SphereGeometry(0.06, 14, 10), mat("#f2c230")); c.scale.y = 0.6; hd.add(c);
+          top = 1.1; break;
+        }
+        case 10: { // cosmos
+          const s2 = stemTube(1.3, 0.15, 0.022); g.add(s2.m);
+          for (let i = 0; i < 4; i++) { const p = s2.curve.getPoint(0.2 + i * 0.15); const l = mesh(new T.SphereGeometry(1, 8, 6), mat(LEAF)); l.scale.set(0.16, 0.01, 0.015); l.position.copy(p); l.rotation.y = i * 1.7; g.add(l); }
+          const hd = head(1.3, 0.4);
+          petalRing(hd, 8, 0.17, 0.085, "#f39ac4", 0.1);
+          const c = mesh(new T.SphereGeometry(0.045, 12, 8), mat("#e0a020")); c.scale.y = 0.6; hd.add(c);
+          top = 1.45; break;
+        }
+        case 11: { // chrysanthemum pompom
+          g.add(stemTube(0.9, 0.05).m); addLeaf(g, 0.35, 0.7, 0.45); addLeaf(g, 0.55, 3.6, 0.4);
+          const hd = head(0.95, 0.15);
+          [[16, 0.13, 0.15], [15, 0.115, 0.45], [14, 0.1, 0.75], [12, 0.085, 1.05], [9, 0.065, 1.35]].forEach(([n, l, t], i) => petalRing(hd, n, l, 0.03, i % 2 ? "#f2c230" : "#f5d34f", t, i * 0.02, i * 0.25, 0.022));
+          top = 1.15; break;
+        }
+        default: { // poinsettia
+          for (let i = 0; i < 6; i++) { const l = mesh(new T.SphereGeometry(1, 12, 8), mat(LEAF)); l.scale.set(0.2, 0.02, 0.08); const pv = new T.Group(); pv.rotation.y = i * 1.05; l.position.x = 0.18; l.rotation.z = -0.25; pv.position.y = 0.35; pv.add(l); g.add(pv); }
+          g.add(stemTube(0.45, 0.02, 0.04).m);
+          const hd = head(0.48, 0);
+          petalRing(hd, 6, 0.2, 0.07, "#d32b2b", 0.12); petalRing(hd, 6, 0.14, 0.055, "#e03a35", 0.3, 0.02, 0.5);
+          for (let i = 0; i < 5; i++) { const d = mesh(new T.SphereGeometry(0.018, 8, 6), mat("#f2c230")); d.position.set(Math.cos(i * 1.26) * 0.03, 0.04, Math.sin(i * 1.26) * 0.03); hd.add(d); }
+          top = 0.7;
+        }
+      }
+      g.userData.top = top; return g;
+    }
+    let birthIslet = null, birthKey = "", sparkles = null;
+    function syncBirthIslet() {
+      const key = profile ? `${profile.birthMonth}|${islandR}` : "";
+      if (key === birthKey) { if (sparkles) sparkles.visible = isBirthMonth(); return; }
+      birthKey = key;
+      if (birthIslet) { world.remove(birthIslet); birthIslet = null; sparkles = null; }
+      if (!profile) return;
+      const R = islandR, bi = new T.Group(), ang = 1.7, dist = R * 1.28;
+      bi.position.set(Math.cos(ang) * dist, 0.35, Math.sin(ang) * dist);
+      const top = mesh(new T.CylinderGeometry(1.0, 0.96, 0.22, 36), grassTopMat, false); top.position.y = -0.11;
+      const under = mesh(new T.ConeGeometry(0.95, 1.7, 9), mat(SOIL_DARK), false); under.rotation.x = Math.PI; under.position.y = -1.07;
+      const ring = mesh(new T.TorusGeometry(0.38, 0.06, 8, 24), mat(STONE)); ring.rotation.x = Math.PI / 2; ring.position.y = 0.03;
+      const sign = new T.Group(); sign.position.set(0.55, 0, 0.35);
+      const post = mesh(new T.BoxGeometry(0.04, 0.4, 0.04), mat(BARK)); post.position.y = 0.2;
+      const board = mesh(new T.BoxGeometry(0.3, 0.17, 0.03), mat("#d9b98a")); board.position.y = 0.42; board.rotation.y = -0.5;
+      sign.add(post, board);
+      const fl = buildBirthFlower(profile.birthMonth); fl.scale.setScalar(1.45);
+      bi.add(top, under, ring, sign, fl);
+      sparkles = new T.Group(); sparkles.position.y = fl.userData.top * 1.45 * 0.75;
+      for (let i = 0; i < 8; i++) { const sp = glow("#fff4c2", 0.22, 0.9); sp.userData.a = i / 8 * 6.283; sp.userData.r = 0.45 + (i % 3) * 0.12; sparkles.add(sp); }
+      sparkles.add(glow("#ffe9b0", 1.6, 0.45)); sparkles.visible = isBirthMonth(); bi.add(sparkles);
+      bi.traverse(o => { o.userData.birthday = true; });
+      bi.userData.baseY = 0.35; birthIslet = bi; world.add(bi);
+    }
+
     // ---- water drops & fireflies ----
     const dropMat = new T.MeshStandardMaterial({ color: lin(0x5aa0e6), emissive: lin(0x1d5fa8), emissiveIntensity: 0.5, roughness: 0.15, metalness: 0.1, transparent: true, opacity: 0.92 });
     function makeDrop() {
@@ -1654,6 +1944,7 @@ ${lines}
       const spacing = 1.7;
       const R = Math.max(4.5, Math.ceil(spacing * Math.sqrt(sorted.length + 1) + 1.8));
       if (R !== islandR) { buildIsland(R); buildFlies(R); applySeason(); }
+      syncBirthIslet();
       const seen = new Set();
       sorted.forEach((e, i) => {
         seen.add(e.id);
@@ -1694,9 +1985,10 @@ ${lines}
       const rect = renderer.domElement.getBoundingClientRect();
       ndc.set(((ev.clientX - rect.left) / rect.width) * 2 - 1, -((ev.clientY - rect.top) / rect.height) * 2 + 1);
       ray.setFromCamera(ndc, camera);
-      const targets = mode === "orbit" ? [...pathStones] : []; if (mailbox) targets.push(mailbox); for (const p of plants.values()) { targets.push(p.group); if (p.drop) targets.push(p.drop); }
+      const targets = mode === "orbit" ? [...pathStones] : []; if (mailbox) targets.push(mailbox); if (birthIslet) targets.push(birthIslet); for (const p of plants.values()) { targets.push(p.group); if (p.drop) targets.push(p.drop); }
       const hit = ray.intersectObjects(targets, true)[0];
       if (hit && hit.object.userData.path) { enterWalk(); return; }
+      if (hit && hit.object.userData.birthday) { openBirthdayCard(); return; }
       if (hit && hit.object.userData.mailbox) { if (!openMailbox()) showTip("아직 편지가 없어요. 꽃을 피우면 정원지기가 편지를 보내요"); return; }
       const id = hit && hit.object.userData.entryId;
       const e = id && shown().find(x => x.id === id);
@@ -1896,6 +2188,8 @@ ${lines}
       stepFall(dt, now);
       if (!reduce.matches) {
         for (const f of floaters) { f.position.y = f.userData.baseY + Math.sin(now / 2200 + f.userData.phase) * 0.18; f.rotation.y += dt * 0.06; }
+        if (birthIslet) { birthIslet.position.y = birthIslet.userData.baseY + Math.sin(now / 2600) * 0.15; }
+        if (sparkles && sparkles.visible) sparkles.children.forEach((sp, i) => { if (sp.userData.r) { const a = sp.userData.a + now / 1800; sp.position.set(Math.cos(a) * sp.userData.r, Math.sin(now / 700 + i) * 0.25, Math.sin(a) * sp.userData.r); sp.material.opacity = 0.4 + 0.6 * Math.abs(Math.sin(now / 500 + i)); } });
         if (cloudRing) cloudRing.rotation.y += dt * 0.012;
       }
       if (perf && dt > 0) { perf.frames++; perf.time += dt; if (perf.time > 4) { if (perf.frames / perf.time < 32) lowerQuality(); perf = null; } }
@@ -2066,6 +2360,7 @@ ${lines}
     }
     renderLetters();
     renderWeek();
+    renderBirthday();
     if (openId && $("sheet").open) { const e = shown().find(x => x.id === openId); if (e) fillSheet(e); }
   }
   function chip(name, col, on, s) {
