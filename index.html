@@ -1735,14 +1735,47 @@ ${lines}
           [[13, 0.15, 0.55], [12, 0.13, 0.85], [11, 0.11, 1.1], [9, 0.09, 1.35], [7, 0.06, 1.5]].forEach(([n, l, t], i) => petalRing(hd, n, l, l * 0.6, i % 2 ? "#f6a8c2" : "#ef7fa6", t, i * 0.03, i * 0.35, 0.028));
           top = 1.2; break;
         }
-        case 2: { // violets
-          for (const [x, z, h] of [[0, 0, 0.45], [0.18, 0.1, 0.35], [-0.15, 0.12, 0.3]]) {
-            const st = stemTube(h, 0.04, 0.02); st.m.position.set(x, 0, z); g.add(st.m);
-            const hd = new T.Group(); hd.position.set(x, h, z); hd.rotation.x = 1.1; g.add(hd);
-            petalRing(hd, 5, 0.08, 0.06, "#7b5bc4", 0.15); const c = mesh(new T.SphereGeometry(0.025, 8, 6), mat("#f6c431")); hd.add(c);
+        case 2: { // violets: a clump of nodding flowers, buds and heart-shaped leaves
+          const DEEP = "#4f2d9a", MID = "#7350c4", LIGHT = "#9a7ad8", r2 = rnd("violet");
+          const heart = new T.Shape();
+          heart.moveTo(0, 0); heart.bezierCurveTo(-0.03, 0.04, -0.13, 0.08, -0.11, 0.16); heart.bezierCurveTo(-0.09, 0.22, -0.02, 0.22, 0, 0.17);
+          heart.bezierCurveTo(0.02, 0.22, 0.09, 0.22, 0.11, 0.16); heart.bezierCurveTo(0.13, 0.08, 0.03, 0.04, 0, 0);
+          const leafGeo = new T.ShapeGeometry(heart, 10); leafGeo.translate(0, -0.17, 0); // notch at the origin, tip pointing away
+          for (let i = 0; i < 10; i++) {
+            const a = i / 10 * 6.283 + r2() * 0.3, d = 0.05 + r2() * 0.08, sc = 0.7 + r2() * 0.35;
+            const pv = new T.Group(); pv.position.set(Math.cos(a) * d, 0.03 + r2() * 0.05, Math.sin(a) * d); pv.rotation.y = -a + Math.PI / 2;
+            const lf = mesh(leafGeo, mat(i % 3 ? "#3f7a45" : "#4f8a4f", { side: T.DoubleSide })); lf.scale.setScalar(sc); lf.rotation.x = -Math.PI / 2 - 0.35 - r2() * 0.3; pv.add(lf);
+            const pet = mesh(new T.CylinderGeometry(0.006, 0.008, 0.06, 5), mat(LEAF)); pet.position.y = -0.02; pv.add(pet);
+            g.add(pv);
           }
-          for (let i = 0; i < 5; i++) { const l = mesh(new T.SphereGeometry(1, 12, 8), mat(LEAF)); l.scale.set(0.12, 0.02, 0.1); l.position.set(Math.cos(i * 1.3) * 0.15, 0.06, Math.sin(i * 1.3) * 0.15); l.rotation.set(0.3, i * 1.3, 0); g.add(l); }
-          top = 0.6; break;
+          const petal = (w, h, col) => { const m2 = mesh(new T.SphereGeometry(1, 16, 10), mat(col)); m2.scale.set(w, h, 0.012); return m2; };
+          function violet() {
+            const f = new T.Group();
+            for (const sx of [-1, 1]) { const up = petal(0.045, 0.07, DEEP); up.position.set(sx * 0.032, 0.055, -0.006); up.rotation.z = -sx * 0.35; f.add(up); }
+            for (const sx of [-1, 1]) { const sd = petal(0.055, 0.04, MID); sd.position.set(sx * 0.058, 0.0, 0.004); sd.rotation.z = sx * 0.25; f.add(sd);
+              const beard = mesh(new T.SphereGeometry(0.006, 8, 6), mat("#d9c8f5")); beard.position.set(sx * 0.026, 0.0, 0.015); f.add(beard); }
+            const low = petal(0.06, 0.06, MID); low.position.set(0, -0.045, 0.012); f.add(low);
+            const edge = petal(0.05, 0.045, LIGHT); edge.position.set(0, -0.06, 0.008); f.add(edge);
+            const throat = mesh(new T.SphereGeometry(0.015, 12, 8), mat("#efe6ff")); throat.scale.set(1, 1.3, 0.35); throat.position.set(0, -0.02, 0.022); f.add(throat);
+            for (const vx of [-0.016, 0, 0.016]) { const v = mesh(new T.BoxGeometry(0.0022, 0.03, 0.002), mat("#2e1760")); v.position.set(vx, -0.05, 0.026); v.rotation.z = vx * 8; f.add(v); }
+            const eye = mesh(new T.SphereGeometry(0.009, 8, 6), mat("#f6c431")); eye.position.set(0, -0.004, 0.03); f.add(eye);
+            return f;
+          }
+          const spots = [[0, 0, 0.5], [0.13, 0.06, 0.42], [-0.12, 0.08, 0.38], [0.05, -0.13, 0.45], [-0.08, -0.1, 0.34], [0.15, -0.07, 0.3]];
+          spots.forEach(([x, z, h], i) => {
+            const out = Math.atan2(z, x) || r2() * 6.28, dx = Math.cos(out), dz = Math.sin(out);
+            const tip = new T.Vector3(x + dx * 0.05, h, z + dz * 0.05);
+            const curve = new T.QuadraticBezierCurve3(new T.Vector3(x * 0.4, 0, z * 0.4), new T.Vector3(x, h * 1.12, z), tip);
+            g.add(mesh(new T.TubeGeometry(curve, 12, 0.007, 5, false), mat(LEAF)));
+            const f = violet(); f.position.copy(tip); f.position.y -= 0.03;
+            f.lookAt(new T.Vector3(tip.x + dx, tip.y - 0.25, tip.z + dz)); f.scale.setScalar(0.95 + (i % 3) * 0.08); g.add(f);
+          });
+          for (const [x, z, h] of [[-0.03, 0.14, 0.33], [0.1, 0.15, 0.27]]) {
+            const curve = new T.QuadraticBezierCurve3(new T.Vector3(x * 0.4, 0, z * 0.4), new T.Vector3(x, h * 1.1, z), new T.Vector3(x + 0.03, h, z + 0.03));
+            g.add(mesh(new T.TubeGeometry(curve, 10, 0.006, 5, false), mat(LEAF)));
+            const bud = mesh(new T.SphereGeometry(0.022, 12, 8), mat(DEEP)); bud.scale.set(0.8, 1.6, 0.8); bud.position.set(x + 0.03, h - 0.03, z + 0.03); bud.rotation.x = 0.5; g.add(bud);
+          }
+          top = 0.62; break;
         }
         case 3: { // daffodil
           g.add(stemTube(1.05, 0.05).m); for (const a of [0, 2.1, 4.2]) bladeLeaf(g, 0.4, a);
@@ -1834,9 +1867,10 @@ ${lines}
       const post = mesh(new T.BoxGeometry(0.04, 0.4, 0.04), mat(BARK)); post.position.y = 0.2;
       const board = mesh(new T.BoxGeometry(0.3, 0.17, 0.03), mat("#d9b98a")); board.position.y = 0.42; board.rotation.y = -0.5;
       sign.add(post, board);
-      const fl = buildBirthFlower(profile.birthMonth); fl.scale.setScalar(1.45);
+      const flScale = profile.birthMonth === 2 ? 2.3 : 1.45;
+      const fl = buildBirthFlower(profile.birthMonth); fl.scale.setScalar(flScale);
       bi.add(top, under, ring, sign, fl);
-      sparkles = new T.Group(); sparkles.position.y = fl.userData.top * 1.45 * 0.75;
+      sparkles = new T.Group(); sparkles.position.y = fl.userData.top * flScale * 0.75;
       for (let i = 0; i < 8; i++) { const sp = glow("#fff4c2", 0.22, 0.9); sp.userData.a = i / 8 * 6.283; sp.userData.r = 0.45 + (i % 3) * 0.12; sparkles.add(sp); }
       sparkles.add(glow("#ffe9b0", 1.6, 0.45)); sparkles.visible = isBirthMonth(); bi.add(sparkles);
       bi.traverse(o => { o.userData.birthday = true; });
