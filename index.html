@@ -51,6 +51,7 @@
   --glow: rgba(255, 236, 150, 0.85);
   color-scheme: dark;
 }
+[hidden] { display: none !important; }
 html { background: var(--bg); }
 body {
   background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.65;
@@ -109,10 +110,24 @@ canvas { display: block; width: 100%; cursor: pointer; touch-action: manipulatio
 #garden3d { position: relative; height: min(68vh, 520px); min-height: 340px; background: linear-gradient(var(--sky-top), var(--sky-bottom)); }
 #garden3d canvas { height: 100%; touch-action: none; cursor: grab; }
 #garden3d canvas:active { cursor: grabbing; }
-.time-chip {
-  position: absolute; top: 12px; right: 12px; z-index: 2; font-size: 0.82rem; padding: 5px 12px;
-  background: rgba(255, 255, 255, 0.72); color: #23302a; border-color: rgba(255, 255, 255, 0.9); backdrop-filter: blur(6px);
+.time-chip, .glass {
+  position: absolute; z-index: 2; font-size: 0.82rem; padding: 5px 12px;
+  background: rgba(255, 255, 255, 0.78); color: #23302a; border: 1px solid rgba(255, 255, 255, 0.9); backdrop-filter: blur(6px);
 }
+.time-chip { top: 12px; right: 12px; }
+#garden3d.walking { height: min(78vh, 620px); }
+.walk-btn { left: 50%; bottom: 14px; transform: translateX(-50%); padding: 8px 16px; font-weight: 600; white-space: nowrap; }
+.exit-btn { top: 12px; left: 12px; }
+.joy { position: absolute; left: 16px; bottom: 16px; z-index: 2; width: 108px; height: 108px; border-radius: 50%;
+  background: rgba(255, 255, 255, 0.28); border: 1.5px solid rgba(255, 255, 255, 0.75); touch-action: none; }
+.knob { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); pointer-events: none; }
+.near { right: 12px; bottom: 16px; left: 140px; border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; max-width: 280px; margin-left: auto; }
+.near-name { font-family: var(--font-display); font-weight: 700; font-size: 0.95rem; }
+.near-date { font-size: 0.78rem; color: #4d5c54; }
+.near-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.near-actions button { padding: 4px 12px; font-size: 0.82rem; background: #fff; color: #23302a; border-color: #c9d5cb; }
+.walk-tip { left: 50%; top: 56px; transform: translateX(-50%); border-radius: 12px; padding: 8px 14px; text-align: center; width: max-content; max-width: calc(100% - 40px); transition: opacity 0.6s; }
 .hint { font-size: 0.82rem; color: var(--muted); margin: 0; }
 .stages { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.82rem; color: var(--muted); }
 
@@ -191,6 +206,18 @@ dialog::backdrop { background: rgba(10, 16, 14, 0.45); }
     <div class="canvas-box">
       <div id="garden3d" hidden aria-label="미니어처 감정 정원. 드래그해서 돌려 보고, 식물을 누르면 그날의 일기가 열려요.">
         <button type="button" class="time-chip" id="time-btn"></button>
+        <button type="button" class="glass walk-btn" id="walk-btn">🚶 정원 안으로 산책하기</button>
+        <button type="button" class="glass exit-btn" id="exit-walk" hidden>⬆ 섬 위로 돌아가기</button>
+        <div class="joy" id="joy" hidden aria-label="걷기 조이스틱"><div class="knob" id="knob"></div></div>
+        <div class="glass near" id="near" hidden>
+          <div class="near-name" id="near-name"></div>
+          <div class="near-date" id="near-date"></div>
+          <div class="near-actions">
+            <button type="button" id="near-open">일기 보기</button>
+            <button type="button" id="near-water">💧 물 주기</button>
+          </div>
+        </div>
+        <div class="glass walk-tip" id="walk-tip" hidden></div>
       </div>
       <canvas id="garden" aria-label="감정 정원. 식물을 누르면 그날의 일기가 열려요."></canvas>
     </div>
@@ -779,10 +806,10 @@ ${text}
 
     // ---- island ----
     const world = new T.Group(); scene.add(world);
-    let island = null, islandR = 0;
+    let island = null, islandR = 0; const pathStones = [];
     function buildIsland(R) {
       if (island) { world.remove(island); island.traverse(o => o.geometry && o.geometry.dispose()); }
-      island = new T.Group(); islandR = R;
+      island = new T.Group(); islandR = R; pathStones.length = 0;
       const r = rnd("island" + R);
       const top = new T.CylinderGeometry(R, R * 0.97, 0.35, 64, 1);
       const grass = mesh(top, mat(GRASS, { flatShading: false }), false); grass.position.y = -0.17; island.add(grass);
@@ -796,11 +823,12 @@ ${text}
       for (let i = 0; i < 9; i++) {
         const t = i / 8, ang = -0.6 + Math.sin(t * 3) * 0.12, rad = R * (0.97 - t * 0.55);
         const st = mesh(new T.CylinderGeometry(0.32 + r() * 0.1, 0.36, 0.08, 7), mat(STONE), false);
-        st.position.set(Math.cos(ang) * rad, 0.03, Math.sin(ang) * rad); st.rotation.y = r() * 3; island.add(st);
+        st.position.set(Math.cos(ang) * rad, 0.03, Math.sin(ang) * rad); st.rotation.y = r() * 3; st.userData.path = true; pathStones.push(st); island.add(st);
       }
       // rocks and grass tufts
       for (let i = 0; i < 4 + Math.round(R / 2); i++) {
-        const a = r() * 6.28, d = R * (0.78 + r() * 0.17);
+        let a = r() * 6.28; const d = R * (0.78 + r() * 0.17);
+        if (Math.abs(Math.atan2(Math.sin(a + 0.6), Math.cos(a + 0.6))) < 0.6) a += 1.4; // keep the path entrance clear
         const rock = mesh(new T.IcosahedronGeometry(0.25 + r() * 0.35, 0), mat(STONE)); rock.scale.y = 0.6;
         rock.position.set(Math.cos(a) * d, 0.05, Math.sin(a) * d); rock.rotation.set(r(), r() * 3, r()); island.add(rock);
       }
@@ -987,6 +1015,7 @@ ${text}
       lanternMat.emissiveIntensity = s.night ? 1.4 : skyKey === "dusk" ? 0.6 : 0;
       lanternLight.intensity = s.night ? 1.6 : skyKey === "dusk" ? 0.5 : 0;
       $("time-btn").textContent = s.label;
+      if (scene.fog) scene.fog.color.set(s.bottom);
     }
     $("time-btn").addEventListener("click", () => { skyManual = true; skyKey = SKY_ORDER[(SKY_ORDER.indexOf(skyKey) + 1) % 4]; applySky(); });
     setInterval(() => { if (!skyManual && skyForNow() !== skyKey) { skyKey = skyForNow(); applySky(); } }, 60000);
@@ -1036,26 +1065,160 @@ ${text}
       const rect = renderer.domElement.getBoundingClientRect();
       ndc.set(((ev.clientX - rect.left) / rect.width) * 2 - 1, -((ev.clientY - rect.top) / rect.height) * 2 + 1);
       ray.setFromCamera(ndc, camera);
-      const targets = []; for (const p of plants.values()) { targets.push(p.group); if (p.drop) targets.push(p.drop); }
+      const targets = mode === "orbit" ? [...pathStones] : []; for (const p of plants.values()) { targets.push(p.group); if (p.drop) targets.push(p.drop); }
       const hit = ray.intersectObjects(targets, true)[0];
+      if (hit && hit.object.userData.path) { enterWalk(); return; }
       const id = hit && hit.object.userData.entryId;
       const e = id && shown().find(x => x.id === id);
       if (e) openSheet(e);
     });
 
+
+    // ---- walk mode ----
+    let mode = "orbit", trans = null, orbitSaved = null;
+    const walker = { x: 0, z: 0, yaw: 0, pitch: -0.03, dist: 0 };
+    const EYE = 0.55, SPEED = 1.25, keys = new Set(), joyVec = { x: 0, y: 0 };
+    const eyeQuat = (yaw, pitch) => new T.Quaternion().setFromEuler(new T.Euler(pitch, yaw, 0, "YXZ"));
+    function startTransition(toPos, toQuat, toFov, done) {
+      trans = { t0: performance.now(), dur: reduce.matches ? 1 : 1500, fromPos: camera.position.clone(), fromQuat: camera.quaternion.clone(), fromFov: camera.fov, toPos, toQuat, toFov, done };
+      mode = "transition";
+    }
+    function stepTransition(now) {
+      if (!trans) return;
+      const x = Math.min(1, (now - trans.t0) / trans.dur), e = x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+      camera.position.lerpVectors(trans.fromPos, trans.toPos, e);
+      camera.quaternion.copy(trans.fromQuat).slerp(trans.toQuat, e);
+      camera.fov = trans.fromFov + (trans.toFov - trans.fromFov) * e; camera.updateProjectionMatrix();
+      if (x >= 1) { const d = trans.done; trans = null; d(); }
+    }
+    function enterWalk() {
+      if (mode !== "orbit") return;
+      orbitSaved = { pos: camera.position.clone(), quat: camera.quaternion.clone(), fov: camera.fov };
+      controls.enabled = false; controls.autoRotate = false;
+      const a = -0.6, rad = islandR * 0.9;
+      walker.x = Math.cos(a) * rad; walker.z = Math.sin(a) * rad; walker.yaw = Math.atan2(walker.x, walker.z); walker.pitch = -0.03;
+      host.classList.add("walking"); resize();
+      $("walk-btn").hidden = true;
+      scene.fog = new T.Fog(new T.Color(SKIES[skyKey].bottom), 5, islandR * 3 + 6);
+      startTransition(new T.Vector3(walker.x, EYE, walker.z), eyeQuat(walker.yaw, walker.pitch), 62, () => {
+        mode = "walk"; $("exit-walk").hidden = false; $("joy").hidden = false;
+        showTip(matchMedia("(pointer: coarse)").matches ? "왼쪽 아래 동그라미로 걷고, 화면을 끌어서 둘러봐요" : "WASD나 방향키로 걷고, 마우스로 끌어서 둘러봐요");
+      });
+    }
+    function exitWalk() {
+      if (mode !== "walk") return;
+      $("exit-walk").hidden = true; $("joy").hidden = true; $("near").hidden = true; nearId = null; keys.clear(); joyVec.x = joyVec.y = 0;
+      startTransition(orbitSaved.pos, orbitSaved.quat, orbitSaved.fov, () => {
+        mode = "orbit"; scene.fog = null; host.classList.remove("walking"); resize();
+        controls.enabled = true; controls.update(); $("walk-btn").hidden = false;
+      });
+    }
+    $("walk-btn").addEventListener("click", enterWalk);
+    $("exit-walk").addEventListener("click", exitWalk);
+    let tipTimer;
+    function showTip(t) { const el = $("walk-tip"); el.textContent = t; el.hidden = false; el.style.opacity = 1; clearTimeout(tipTimer); tipTimer = setTimeout(() => { el.style.opacity = 0; setTimeout(() => { el.hidden = true; }, 600); }, 4200); }
+
+    // look around by dragging the view
+    let look = null;
+    renderer.domElement.addEventListener("pointerdown", ev => { if (mode === "walk") { look = { id: ev.pointerId, x: ev.clientX, y: ev.clientY }; } });
+    renderer.domElement.addEventListener("pointermove", ev => {
+      if (!look || ev.pointerId !== look.id || mode !== "walk") return;
+      walker.yaw -= (ev.clientX - look.x) * 0.006; walker.pitch = clamp(walker.pitch - (ev.clientY - look.y) * 0.004, -0.7, 0.9);
+      look.x = ev.clientX; look.y = ev.clientY;
+    });
+    const endLook = ev => { if (look && ev.pointerId === look.id) look = null; };
+    renderer.domElement.addEventListener("pointerup", endLook); renderer.domElement.addEventListener("pointercancel", endLook);
+
+    // joystick
+    const joy = $("joy"), knob = $("knob");
+    let joyId = null;
+    function joyMove(ev) {
+      const r = joy.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2, max = r.width / 2 - 12;
+      let dx = ev.clientX - cx, dy = ev.clientY - cy; const len = Math.hypot(dx, dy);
+      if (len > max) { dx *= max / len; dy *= max / len; }
+      knob.style.transform = `translate(${dx}px, ${dy}px)`; joyVec.x = dx / max; joyVec.y = -dy / max;
+    }
+    joy.addEventListener("pointerdown", ev => { joyId = ev.pointerId; joy.setPointerCapture(ev.pointerId); joyMove(ev); ev.preventDefault(); });
+    joy.addEventListener("pointermove", ev => { if (ev.pointerId === joyId) joyMove(ev); });
+    const joyEnd = ev => { if (ev.pointerId !== joyId) return; joyId = null; joyVec.x = joyVec.y = 0; knob.style.transform = ""; };
+    joy.addEventListener("pointerup", joyEnd); joy.addEventListener("pointercancel", joyEnd);
+
+    // keyboard
+    const KEYMAP = { KeyW: "f", ArrowUp: "f", KeyS: "b", ArrowDown: "b", KeyA: "l", ArrowLeft: "l", KeyD: "r", ArrowRight: "r" };
+    addEventListener("keydown", ev => {
+      if (mode !== "walk" || (ev.target.closest && ev.target.closest("textarea, input, dialog"))) return;
+      if (ev.code === "Escape") { exitWalk(); return; }
+      const k = KEYMAP[ev.code]; if (k) { keys.add(k); ev.preventDefault(); }
+    });
+    addEventListener("keyup", ev => { const k = KEYMAP[ev.code]; if (k) keys.delete(k); });
+    addEventListener("blur", () => keys.clear());
+
+    // nearby plant card
+    let nearId = null, nearKey = "";
+    function updateNear() {
+      let best = null, bd = 1e9;
+      const fx = -Math.sin(walker.yaw), fz = -Math.cos(walker.yaw);
+      for (const [id, p] of plants) {
+        const dx = p.group.position.x - walker.x, dz = p.group.position.z - walker.z, d = Math.hypot(dx, dz);
+        if (d > 1.6) continue;
+        const facing = d < 0.6 ? 1 : (dx * fx + dz * fz) / d; // prefer plants in front of you
+        if (facing < 0.35) continue;
+        const score = d - facing * 0.5;
+        if (score < bd) { bd = score; best = id; }
+      }
+      const e = best && shown().find(x => x.id === best);
+      const key = e ? e.id + stageOf(e) + needsWater(e) : "";
+      if (key === nearKey) return;
+      nearKey = key; nearId = e ? e.id : null;
+      $("near").hidden = !e; if (!e) return;
+      const st = stageOf(e), [, m, d] = e.date.split("-");
+      $("near-name").textContent = `${plantName(e.emotions[0].n)} · ${STAGES[st]}`;
+      $("near-date").textContent = `${+m}월 ${+d}일 · ${e.title}`;
+      $("near-water").hidden = !needsWater(e);
+    }
+    $("near-open").addEventListener("click", () => { const e = nearId && shown().find(x => x.id === nearId); if (e) openSheet(e); });
+    $("near-water").addEventListener("click", async () => {
+      const e = nearId && entries.find(x => x.id === nearId); if (!e || !needsWater(e)) return;
+      try { const st = await water(e); showTip(st === 3 ? `${plantName(e.emotions[0].n)}이(가) 피었어요 🌸` : `${STAGES[st]}로 자랐어요`); }
+      catch (err) { showTip("물을 주지 못했어요. 다시 시도해 주세요."); }
+    });
+
+    function stepWalk(dt, now) {
+      let fx = joyVec.y, sx = joyVec.x;
+      if (keys.has("f")) fx += 1; if (keys.has("b")) fx -= 1; if (keys.has("r")) sx += 1; if (keys.has("l")) sx -= 1;
+      const mag = Math.min(1, Math.hypot(fx, sx));
+      if (mag > 0.05) {
+        const n = Math.hypot(fx, sx) || 1, f = fx / n * mag, s2 = sx / n * mag;
+        const sy = Math.sin(walker.yaw), cy = Math.cos(walker.yaw);
+        const step = SPEED * dt;
+        walker.x += (-sy * f + cy * s2) * step; walker.z += (-cy * f - sy * s2) * step;
+        walker.dist += step * mag;
+        for (const p of plants.values()) {
+          const dx = walker.x - p.group.position.x, dz = walker.z - p.group.position.z, d = Math.hypot(dx, dz), min = 0.42;
+          if (d < min && d > 1e-4) { walker.x = p.group.position.x + dx / d * min; walker.z = p.group.position.z + dz / d * min; }
+        }
+        const rr = Math.hypot(walker.x, walker.z), lim = islandR * 0.93;
+        if (rr > lim) { walker.x *= lim / rr; walker.z *= lim / rr; }
+      }
+      const bob = reduce.matches ? 0 : Math.sin(walker.dist * 9) * 0.022;
+      camera.position.set(walker.x, EYE + bob, walker.z);
+      camera.quaternion.copy(eyeQuat(walker.yaw, walker.pitch));
+      updateNear();
+    }
     // ---- loop ----
     function resize() {
       const w = host.clientWidth, h = host.clientHeight; if (!w || !h) return;
       renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix();
-      if (islandR) fitCamera();
+      if (islandR && mode === "orbit") fitCamera();
     }
     new ResizeObserver(resize).observe(host); resize();
     let visible = true;
     new IntersectionObserver(es => { visible = es[0].isIntersecting; }).observe(host);
     const easeOutBack = x => 1 + 2.2 * Math.pow(x - 1, 3) + 1.2 * Math.pow(x - 1, 2);
+    let lastNow = 0;
     function tick(now) {
       requestAnimationFrame(tick);
-      if (!visible || document.hidden) return;
+      if (!visible || document.hidden) { lastNow = 0; return; }
       const still = reduce.matches;
       for (const p of plants.values()) {
         const g = p.group;
@@ -1068,7 +1231,8 @@ ${text}
         f.position.set(Math.cos(a) * u.d + Math.sin(now / 1300 + u.p) * 0.3, u.y + (still ? 0 : Math.sin(now / 900 + u.p) * 0.25), Math.sin(a) * u.d);
         f.material.opacity = still ? 0.8 : 0.35 + 0.65 * Math.max(0, Math.sin(now / 700 + u.p * 3));
       }
-      controls.update();
+      const dt = Math.min(0.05, (now - (lastNow || now)) / 1000); lastNow = now;
+      if (mode === "orbit") controls.update(); else if (mode === "walk") stepWalk(dt, now); else stepTransition(now);
       renderer.render(scene, camera);
     }
     requestAnimationFrame(tick);
