@@ -119,15 +119,18 @@ canvas { display: block; width: 100%; cursor: pointer; touch-action: manipulatio
   position: absolute; z-index: 2; font-size: 0.82rem; padding: 5px 12px;
   background: rgba(255, 255, 255, 0.78); color: #23302a; border: 1px solid rgba(255, 255, 255, 0.9); backdrop-filter: blur(6px);
 }
-.time-chip { top: 12px; right: 12px; }
-.season-chip { top: 50px; }
-.music-chip { top: 88px; }
-.full-chip { top: 126px; }
+.time-chip { top: 12px; right: 12px; width: 42px; height: 42px; padding: 0; border-radius: 50%; display: grid; place-items: center; box-shadow: 0 2px 8px rgba(20, 30, 25, 0.12); }
+.time-chip svg { width: 21px; height: 21px; display: block; }
+.time-chip:hover { background: rgba(255, 255, 255, 0.92); }
+.time-chip[aria-pressed="true"] { background: #fff; color: #6b55b0; }
+.season-chip { top: 62px; }
+.music-chip { top: 112px; }
+.full-chip { top: 162px; }
 .full-water { left: 12px; bottom: 14px; padding: 8px 14px; font-weight: 600; color: #1d5fa8; }
 #garden3d.full { position: fixed; inset: 0; z-index: 50; height: 100%; min-height: 0; }
 #garden3d.full .time-chip { right: calc(12px + env(safe-area-inset-right, 0px)); margin-top: env(safe-area-inset-top, 0px); }
 #garden3d.full .exit-btn { left: calc(12px + env(safe-area-inset-left, 0px)); margin-top: env(safe-area-inset-top, 0px); }
-#garden3d.full .walk-tip { margin-top: env(safe-area-inset-top, 0px); }
+#garden3d.full .walk-tip { margin-top: env(safe-area-inset-top, 0px); left: calc(12px + env(safe-area-inset-left, 0px)); right: calc(66px + env(safe-area-inset-right, 0px)); }
 #garden3d.full .walk-btn { bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
 #garden3d.full .full-water { left: calc(12px + env(safe-area-inset-left, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
 #garden3d.full .joy { left: calc(16px + env(safe-area-inset-left, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
@@ -147,7 +150,8 @@ canvas { display: block; width: 100%; cursor: pointer; touch-action: manipulatio
 .near-date { font-size: 0.78rem; color: #4d5c54; }
 .near-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
 .near-actions button { padding: 4px 12px; font-size: 0.82rem; background: #fff; color: #23302a; border-color: #c9d5cb; }
-.walk-tip { left: 50%; top: 172px; transform: translateX(-50%); border-radius: 12px; padding: 8px 14px; text-align: center; width: max-content; max-width: calc(100% - 40px); transition: opacity 0.6s; }
+.walk-tip { left: 12px; right: 66px; top: 62px; border-radius: 12px; padding: 8px 14px; text-align: center; transition: opacity 0.6s; }
+.walk-tip.center { margin-inline: auto; width: max-content; max-width: calc(100% - 78px); }
 .hint { font-size: 0.82rem; color: var(--muted); margin: 0; }
 .stages { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.82rem; color: var(--muted); }
 
@@ -272,8 +276,8 @@ dialog::backdrop { background: rgba(10, 16, 14, 0.45); }
       <div id="garden3d" hidden aria-label="미니어처 감정 정원. 드래그해서 돌려 보고, 식물을 누르면 그날의 일기가 열려요.">
         <button type="button" class="time-chip" id="time-btn"></button>
         <button type="button" class="time-chip season-chip" id="season-btn"></button>
-        <button type="button" class="time-chip music-chip" id="music-chip" aria-label="음악 켜기">🔇 음악</button>
-        <button type="button" class="time-chip full-chip" id="full-btn" aria-pressed="false">⛶ 크게</button>
+        <button type="button" class="time-chip music-chip" id="music-chip" aria-label="음악 켜기"></button>
+        <button type="button" class="time-chip full-chip" id="full-btn" aria-pressed="false"></button>
         <button type="button" class="glass full-water" id="full-water" hidden>💧 물 주기</button>
         <button type="button" class="glass walk-btn" id="walk-btn">🚶 정원 안으로 산책하기</button>
         <button type="button" class="glass exit-btn" id="exit-walk" hidden>⬆ 섬 위로 돌아가기</button>
@@ -1142,6 +1146,25 @@ ${lines}
     night: { top: "#0a1124", bottom: "#253350", sun: "#9fb4ff", sunI: 0.35, hs: "#5a6c9c", hg: "#1c1c26", hi: 0.7, night: true, label: "🌙 밤 정원" },
   };
   const SKY_ORDER = ["dawn", "day", "dusk", "night"];
+  // one line-icon set for the round buttons on the garden (24px grid, drawn with the button's text colour)
+  const ICONS = {
+    day: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/>',
+    dawn: '<path d="M3 18h18M7 18a5 5 0 0 1 10 0M12 4v5M9.5 6.5 12 4l2.5 2.5M4.6 12.6l1.4 1M19.4 12.6l-1.4 1"/>',
+    dusk: '<path d="M3 18h18M7 18a5 5 0 0 1 10 0M12 4v5M9.5 6.5 12 9l2.5-2.5M4.6 12.6l1.4 1M19.4 12.6l-1.4 1"/>',
+    night: '<path d="M19.5 14.6A8 8 0 1 1 9.4 4.5a6.4 6.4 0 0 0 10.1 10.1z"/><path d="M17 4.5v2M16 5.5h2"/>',
+    spring: '<circle cx="12" cy="11" r="2.2"/><path d="M12 8.8c-1.6-2.4-.4-4.6 0-4.8.4.2 1.6 2.4 0 4.8zM14.1 10.3c2.6-1 4.3.7 4.3 1.1-.4.3-2.8.9-4.3-1.1zM13.3 12.9c1.5 2.3.4 4.5-.1 4.6-.3-.4-1.3-2.6.1-4.6zM10.7 12.9c-1.4 2 -.4 4.2-.1 4.6.5-.1 1.6-2.3.1-4.6zM9.9 10.3c-1.5 2-3.9 1.4-4.3 1.1 0-.4 1.7-2.1 4.3-1.1zM12 17.5V21"/>',
+    summer: '<path d="M5 19C5 11 11 5 19 5c0 8-6 14-14 14z"/><path d="M5 19 13 11M9 15h3.5M11 13v-3"/>',
+    autumn: '<path d="M12 3l1.6 3.4 2.6-1.2-.6 3.6 3.4-.6-1.6 3 2.6 1.4-4 1.4.6 2.2-3.6-1L12 19l-1-3.8-3.6 1 .6-2.2-4-1.4 2.6-1.4-1.6-3 3.4.6-.6-3.6 2.6 1.2z"/><path d="M12 19v2.5M12 9v7"/>',
+    winter: '<path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9M9.6 4.6 12 6.4l2.4-1.8M9.6 19.4 12 17.6l2.4 1.8M4.6 10.4l2.8.3-.6 2.9M19.4 13.6l-2.8-.3.6-2.9M4.6 13.6l2.8-.3-.6-2.9M19.4 10.4l-2.8.3.6 2.9"/>',
+    musicOn: '<path d="M9 17.5V6l10-2v11.5"/><circle cx="6.5" cy="17.5" r="2.5"/><circle cx="16.5" cy="15.5" r="2.5"/>',
+    musicOff: '<path d="M9 17.5V6l10-2v11.5"/><circle cx="6.5" cy="17.5" r="2.5"/><circle cx="16.5" cy="15.5" r="2.5"/><path d="M3.5 3.5l17 17"/>',
+    expand: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
+    collapse: '<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>',
+  };
+  function setIcon(btn, name, label) {
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`;
+    btn.setAttribute("aria-label", label); btn.title = label;
+  }
   const SEASONS = {
     spring: { label: "🌸 봄", grass: "#9ec488", tuft: "#86b56c", canopy: ["#f7c4d4", "#f2adc4", "#fbd8e3", "#f5bccf"], fall: "petal" },
     summer: { label: "🌿 여름", grass: "#77b465", tuft: "#5c9c50", canopy: ["#4f9a4f", "#62af59", "#3f8a45", "#57a352"], fall: "fluff" },
@@ -1521,10 +1544,10 @@ ${lines}
       flies.visible = s.night;
       lanternMat.emissiveIntensity = s.night ? 1.4 : skyKey === "dusk" ? 0.6 : 0;
       lanternLight.intensity = s.night ? 1.6 : skyKey === "dusk" ? 0.5 : 0;
-      $("time-btn").textContent = s.label;
+      setIcon($("time-btn"), skyKey, s.label.replace(/^\S+\s/, ""));
       if (scene.fog) scene.fog.color.copy(lin(s.bottom));
     }
-    $("time-btn").addEventListener("click", () => { skyManual = true; skyKey = SKY_ORDER[(SKY_ORDER.indexOf(skyKey) + 1) % 4]; applySky(); });
+    $("time-btn").addEventListener("click", () => { skyManual = true; skyKey = SKY_ORDER[(SKY_ORDER.indexOf(skyKey) + 1) % 4]; applySky(); showTip(SKIES[skyKey].label, true); });
     setInterval(() => { if (!skyManual && skyForNow() !== skyKey) { skyKey = skyForNow(); applySky(); } }, 60000);
 
     // ---- seasons ----
@@ -1572,10 +1595,10 @@ ${lines}
       bladeMat.color.copy(lin(se.tuft));
       for (const c of canopies) { c.visible = !!se.canopy; if (se.canopy) c.material = mat(se.canopy[c.userData.canopy % se.canopy.length], { flatShading: true }); }
       for (const c of snowCaps) c.visible = !se.canopy;
-      $("season-btn").textContent = se.label;
+      setIcon($("season-btn"), seasonKey, se.label.replace(/^\S+\s/, "") + " 정원");
       buildFall();
     }
-    $("season-btn").addEventListener("click", () => { seasonManual = true; seasonKey = SEASON_ORDER[(SEASON_ORDER.indexOf(seasonKey) + 1) % 4]; applySeason(); });
+    $("season-btn").addEventListener("click", () => { seasonManual = true; seasonKey = SEASON_ORDER[(SEASON_ORDER.indexOf(seasonKey) + 1) % 4]; applySeason(); showTip(SEASONS[seasonKey].label + " 정원", true); });
     setInterval(() => { if (!seasonManual && seasonForNow() !== seasonKey) { seasonKey = seasonForNow(); applySeason(); } }, 60000);
 
     // ---- sync plants with entries ----
@@ -1683,13 +1706,14 @@ ${lines}
       if (v === full) return;
       full = v; host.classList.toggle("full", v);
       document.documentElement.style.overflow = v ? "hidden" : "";
-      $("full-btn").textContent = v ? "✕ 작게" : "⛶ 크게"; $("full-btn").setAttribute("aria-pressed", String(v));
+      setIcon($("full-btn"), v ? "collapse" : "expand", v ? "작게 보기" : "화면 가득 보기"); $("full-btn").setAttribute("aria-pressed", String(v));
       syncFullWater();
       if (v && host.requestFullscreen) host.requestFullscreen({ navigationUI: "hide" }).then(() => { nativeFull = true; }, () => {});
       if (!v && document.fullscreenElement) document.exitFullscreen().catch(() => {});
       if (!v) nativeFull = false;
       resize();
     }
+    setIcon($("full-btn"), "expand", "화면 가득 보기");
     $("full-btn").addEventListener("click", () => setFull(!full));
     document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && nativeFull) { nativeFull = false; setFull(false); } });
     addEventListener("keydown", ev => { if (ev.code === "Escape" && full && mode === "orbit" && !document.querySelector("dialog[open]")) setFull(false); });
@@ -1701,7 +1725,7 @@ ${lines}
     $("full-water").addEventListener("click", () => $("water-all").click());
     $("exit-walk").addEventListener("click", exitWalk);
     let tipTimer;
-    function showTip(t) { const el = $("walk-tip"); el.textContent = t; el.hidden = false; el.style.opacity = 1; clearTimeout(tipTimer); tipTimer = setTimeout(() => { el.style.opacity = 0; setTimeout(() => { el.hidden = true; }, 600); }, 4200); }
+    function showTip(t, short) { const el = $("walk-tip"); el.classList.toggle("center", !!short); el.textContent = t; el.hidden = false; el.style.opacity = 1; clearTimeout(tipTimer); tipTimer = setTimeout(() => { el.style.opacity = 0; setTimeout(() => { el.hidden = true; }, 600); }, 4200); }
 
     // look around by dragging the view
     let look = null;
@@ -1947,10 +1971,11 @@ ${lines}
     }
     function sync() {
       $("music-btn").textContent = on ? "🎵 음악 끄기" : "🎵 음악 켜기"; $("music-btn").setAttribute("aria-pressed", String(on));
-      $("music-chip").textContent = on ? "🎵 음악" : "🔇 음악"; $("music-chip").setAttribute("aria-label", on ? "음악 끄기" : "음악 켜기");
+      setIcon($("music-chip"), on ? "musicOn" : "musicOff", on ? "음악 끄기" : "음악 켜기"); $("music-chip").setAttribute("aria-pressed", String(on));
       $("music-vol-wrap").hidden = !on;
     }
-    const toggle = () => (on ? stop() : start());
+    const toggle = () => { const was = on; if (was) stop(); else start(); if (g3d && g3d.tip) g3d.tip(was ? "🔇 음악을 껐어요" : "🎵 음악을 켰어요", true); };
+    sync();
     $("music-btn").addEventListener("click", toggle);
     $("music-chip").addEventListener("click", toggle);
     $("music-vol").addEventListener("input", () => {
