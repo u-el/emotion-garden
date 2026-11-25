@@ -30,6 +30,9 @@
   --water: #4f8fd0;
   --danger: #b4503a;
   --glow: rgba(255, 240, 170, 0);
+  --paper: #fbf8f1;
+  --ink: #3a3328;
+  --stamp: #c4553f;
   --font-display: "Hahmlet", "Nanum Myeongjo", serif;
   --font-body: "Gowun Dodum", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
 }
@@ -40,6 +43,7 @@
     --sky-top: #0c1220; --sky-bottom: #17222a; --soil: #3d3a30; --path: #4b4638; --leaf: #6fa070;
     --water: #7db4ea; --danger: #e08a74;
     --glow: rgba(255, 236, 150, 0.85);
+    --paper: #262a2b; --ink: #ece4d4; --stamp: #e08a74;
     color-scheme: dark;
   }
 }
@@ -49,6 +53,7 @@
   --sky-top: #0c1220; --sky-bottom: #17222a; --soil: #3d3a30; --path: #4b4638; --leaf: #6fa070;
   --water: #7db4ea; --danger: #e08a74;
   --glow: rgba(255, 236, 150, 0.85);
+  --paper: #262a2b; --ink: #ece4d4; --stamp: #e08a74;
   color-scheme: dark;
 }
 [hidden] { display: none !important; }
@@ -150,6 +155,23 @@ dialog::backdrop { background: rgba(10, 16, 14, 0.45); }
 .sheet details { font-size: 0.9rem; color: var(--muted); }
 .sheet details p { white-space: pre-wrap; margin: 8px 0 0; }
 .confirm { font-size: 0.88rem; color: var(--muted); }
+.letters { display: flex; flex-direction: column; gap: 8px; }
+.letter-item { display: grid; grid-template-columns: 10px 1fr auto; gap: 4px 10px; align-items: baseline; text-align: left; border-radius: 12px; padding: 10px 14px; background: var(--bg); }
+.letter-item .unread { width: 8px; height: 8px; border-radius: 50%; background: var(--stamp); align-self: center; }
+.letter-item .from { font-weight: 600; min-width: 0; }
+.letter-item .when { font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.letter-item .peek { grid-column: 2 / 4; font-size: 0.85rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.empty { font-size: 0.88rem; color: var(--muted); margin: 0; }
+#letter { background: var(--paper); color: var(--ink); }
+.letter-sheet { padding: 26px 24px 20px; display: flex; flex-direction: column; gap: 14px; position: relative; }
+.letter-sheet .stamp { position: absolute; top: 18px; right: 20px; width: 46px; height: 54px; border: 2px dashed var(--stamp); border-radius: 4px; display: grid; place-items: center; font-size: 1.4rem; transform: rotate(4deg); }
+.letter-sheet .meta { font-size: 0.82rem; color: var(--stamp); letter-spacing: 0.04em; padding-right: 60px; }
+.letter-sheet h3 { font-size: 1.2rem; padding-right: 60px; }
+.letter-body { white-space: pre-wrap; margin: 0; font-family: var(--font-display); font-size: 1rem; line-height: 1.95;
+  background-image: repeating-linear-gradient(transparent, transparent calc(1.95em - 1px), color-mix(in srgb, var(--ink) 14%, transparent) calc(1.95em - 1px), color-mix(in srgb, var(--ink) 14%, transparent) 1.95em);
+  max-height: 52vh; overflow: auto; }
+.letter-sheet .row button { background: transparent; color: var(--ink); border-color: color-mix(in srgb, var(--ink) 30%, transparent); }
+.letter-sheet .row button.primary { background: var(--stamp); color: #fff; border-color: var(--stamp); }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 
@@ -227,6 +249,14 @@ dialog::backdrop { background: rgba(10, 16, 14, 0.45); }
     <p class="hint" id="garden-hint">식물을 누르면 그날의 일기를 다시 읽을 수 있어요. 세기가 강한 감정일수록 크게 자라요.</p>
   </section>
 
+  <section class="panel" aria-labelledby="letters-title">
+    <div class="panel-head">
+      <h2 id="letters-title">정원지기의 편지함</h2>
+      <span class="stat" id="letters-stat"></span>
+    </div>
+    <div class="letters" id="letters"></div>
+  </section>
+
   <section class="panel guide" aria-labelledby="guide-title">
     <div class="panel-head">
       <h2 id="guide-title">감정 도감</h2>
@@ -256,6 +286,7 @@ dialog::backdrop { background: rgba(10, 16, 14, 0.45); }
     <div class="chips" id="sheet-emos"></div>
     <p class="diary" id="sheet-diary"></p>
     <details id="sheet-orig-box" hidden><summary>내가 쓴 글</summary><p id="sheet-orig"></p></details>
+    <div class="row" id="sheet-letter-row" hidden><button type="button" id="sheet-letter">✉️ 정원지기의 편지 읽기</button></div>
     <div class="row" id="sheet-actions">
       <button type="button" class="water" id="sheet-water">물 주기</button>
       <button type="button" class="primary" id="sheet-close">닫기</button>
@@ -265,6 +296,19 @@ dialog::backdrop { background: rgba(10, 16, 14, 0.45); }
       <span class="confirm">정말 뽑을까요? 일기도 함께 지워져요.</span>
       <button type="button" id="del-yes">뽑기</button>
       <button type="button" class="ghost" id="del-no">그만두기</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="letter">
+  <div class="letter-sheet">
+    <div class="stamp" id="letter-stamp" aria-hidden="true">🌸</div>
+    <div class="meta" id="letter-meta"></div>
+    <h3 id="letter-title"></h3>
+    <p class="letter-body" id="letter-body"></p>
+    <div class="row">
+      <button type="button" class="primary" id="letter-close">닫기</button>
+      <button type="button" id="letter-diary">그날 일기 보기</button>
     </div>
   </div>
 </dialog>
@@ -539,7 +583,106 @@ ${text}
   async function water(e) {
     const days = [...(e.waterDays || []), today()];
     await (store || localStore).update(e.id, { waterDays: days });
-    return clamp(days.length - 1, 0, 3);
+    const st = clamp(days.length - 1, 0, 3);
+    if (st === 3) deliverLetter({ ...e, waterDays: days });
+    return st;
+  }
+
+  // ---------- Gardener's letters ----------
+  const iga = w => { const c = w.charCodeAt(w.length - 1); return w + (c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 ? "이" : "가"); };
+  const md = d => { const [, m, dd] = String(d).split("-"); return `${+m}월 ${+dd}일`; };
+  const pending = new Set();
+  function letterPrompt(e) {
+    const emos = e.emotions.map(x => `${E[x.n][0]}(세기 ${x.s})`).join(", ");
+    return `너는 '감정정원'의 정원지기야. 사용자가 며칠 전 심은 감정 씨앗이 오늘 꽃으로 피었어. 그 사람에게 짧은 편지를 써줘.
+
+- 심은 날: ${md(e.date)}
+- 그날의 감정: ${emos}
+- 피어난 꽃: ${plantName(e.emotions[0].n)}
+- 물을 준 날: ${(e.waterDays || []).filter(d => /^\d{4}-/.test(d)).map(md).join(", ")}
+- 오늘: ${md(today())}
+- 그날의 일기 제목: ${e.title}
+- 그날의 일기:
+"""
+${(e.diary || e.original || "").slice(0, 1500)}
+"""
+
+규칙:
+- 존댓말로, 따뜻하고 담백하게. 5~8문장, 350자 이내.
+- 꽃이 피었다는 소식으로 시작하고, 그날의 감정을 다시 떠올려 줘. 일기에 없는 사실은 지어내지 마.
+- 며칠이 지난 지금 그 마음은 어떤지 부드럽게 물어봐 줘. 충고나 진단은 하지 마.
+- 일기에 스스로를 해치고 싶다는 내용이 있으면, 혼자 견디지 말고 가까운 사람이나 자살예방상담전화 109에 이야기해 보라고 부드럽게 전해줘.
+- 머리말 없이 본문만 쓰고, 마지막 줄은 "— 감정정원의 정원지기"로 끝내.
+편지 본문만 답해.`;
+  }
+  function templateLetter(e) {
+    const flower = plantName(e.emotions[0].n), feel = E[e.emotions[0].n][0];
+    const care = Math.max(1, (e.waterDays || []).length - 1);
+    return `${iga(flower)} 피었어요.
+
+${md(e.date)}, '${e.title}'(이)라고 적었던 날 심은 씨앗이에요. 그날 마음 한쪽에 있던 ${feel}을(를) 기억해요.
+${care}번의 물을 주며 돌봐준 덕분에 오늘 꽃이 되었어요.
+
+며칠이 지난 지금, 그 마음은 어떤가요? 어떤 마음이든 이 정원에서는 꽃이 될 수 있어요.
+오늘의 마음도 편하게 들려주세요.
+
+— 감정정원의 정원지기`;
+  }
+  async function deliverLetter(e) {
+    if (e.example || e.letter || pending.has(e.id)) return;
+    pending.add(e.id);
+    let text = "", ai = false;
+    if (sample) {
+      try { const r = await sample(letterPrompt(e), { modelTier: "default" }); text = String(r.text || "").trim(); ai = !!text; }
+      catch (err) { if (err && err.code === "not_granted") sample = null; }
+    }
+    if (!text) text = templateLetter(e);
+    try {
+      await (store || localStore).update(e.id, { letter: { text: text.slice(0, 2000), at: Date.now(), read: false, ai } });
+      setMsg($("garden-msg"), `✉️ 정원지기의 편지가 도착했어요. 우체통이나 편지함에서 읽어 보세요.`, "ok");
+      if (g3d) g3d.tip("✉️ 정원지기의 편지가 도착했어요");
+    } catch (err) { setMsg($("garden-msg"), "편지를 받지 못했어요. 그날의 식물을 눌러 다시 받아 보세요.", "err"); }
+    finally { pending.delete(e.id); render(); }
+  }
+  const canGetLetter = e => !e.example && !e.letter && Array.isArray(e.waterDays) && e.waterDays.length >= 4;
+  let letterId = null;
+  function openLetter(e) {
+    letterId = e.id;
+    $("letter-meta").textContent = `${md(ymd(new Date(e.letter.at)))}에 도착한 편지`;
+    $("letter-title").textContent = `${iga(plantName(e.emotions[0].n))} 피었어요`;
+    $("letter-stamp").textContent = { daisy: "🌼", tulip: "🌷", bell: "🔔", fern: "🌿", thorn: "🌵", moss: "🪨", willow: "🍃", sprout: "🌱" }[E[e.emotions[0].n][1]] || "🌸";
+    $("letter-body").textContent = e.letter.text;
+    if ($("sheet").open) $("sheet").close();
+    $("letter").showModal();
+    if (!e.letter.read) (store || localStore).update(e.id, { letter: { ...e.letter, read: true } }).catch(() => {});
+  }
+  function openMailbox() {
+    const withLetters = entries.filter(e => e.letter).sort((a, b) => b.letter.at - a.letter.at);
+    const e = withLetters.find(x => !x.letter.read) || withLetters[0];
+    if (e) { openLetter(e); return true; }
+    return false;
+  }
+  $("letter-close").onclick = () => $("letter").close();
+  $("letter").addEventListener("click", ev => { if (ev.target === $("letter")) $("letter").close(); });
+  $("letter-diary").onclick = () => { const e = entries.find(x => x.id === letterId); $("letter").close(); if (e) openSheet(e); };
+  function renderLetters() {
+    const box = $("letters"); box.textContent = "";
+    const list = entries.filter(e => e.letter).sort((a, b) => b.letter.at - a.letter.at);
+    const unread = list.filter(e => !e.letter.read).length;
+    $("letters-stat").textContent = list.length ? (unread ? `새 편지 ${unread}통` : `${list.length}통`) : "";
+    if (!list.length) {
+      const p = document.createElement("p"); p.className = "empty";
+      p.textContent = "씨앗이 꽃으로 피면 정원지기가 편지를 보내요. 섬의 우체통에 빨간 깃발이 올라가면 새 편지가 온 거예요.";
+      box.append(p); return;
+    }
+    for (const e of list) {
+      const b = document.createElement("button"); b.type = "button"; b.className = "letter-item";
+      const dot = document.createElement("span"); dot.className = e.letter.read ? "" : "unread";
+      const from = document.createElement("span"); from.className = "from"; from.textContent = `${iga(plantName(e.emotions[0].n))} 피었어요`;
+      const when = document.createElement("span"); when.className = "when"; when.textContent = md(ymd(new Date(e.letter.at)));
+      const peek = document.createElement("span"); peek.className = "peek"; peek.textContent = e.letter.text.split("\n").find(l => l.trim()) || "";
+      b.append(dot, from, when, peek); b.onclick = () => openLetter(e); box.append(b);
+    }
   }
   $("water-all").addEventListener("click", async () => {
     const todo = entries.filter(needsWater);
@@ -547,7 +690,7 @@ ${text}
     const bloomed = [];
     try { for (const e of todo) if (await water(e) === 3) bloomed.push(plantName(e.emotions[0].n)); }
     catch (err) { setMsg($("garden-msg"), "물을 주지 못했어요. 다시 시도해 주세요.", "err"); return; }
-    setMsg($("garden-msg"), bloomed.length ? `${bloomed.join(", ")}이(가) 피었어요 🌸` : `${todo.length}그루에 물을 줬어요. 조금 더 자랐어요.`, "ok");
+    setMsg($("garden-msg"), bloomed.length ? `${iga(bloomed.join(", "))} 피었어요 🌸` : `${todo.length}그루에 물을 줬어요. 조금 더 자랐어요.`, "ok");
   });
 
   // ---------- Example garden shown only while empty ----------
@@ -817,6 +960,7 @@ ${text}
     // ---- island ----
     const world = new T.Group(); scene.add(world);
     let island = null, islandR = 0; const pathStones = [], canopies = [], snowCaps = [], obstacles = [];
+    let mailbox = null, mailFlag = null, mailEnvelope = null, mailUnread = 0;
     function buildIsland(R) {
       if (island) { world.remove(island); island.traverse(o => o.geometry && o.geometry.dispose()); }
       island = new T.Group(); islandR = R; pathStones.length = 0; canopies.length = 0; snowCaps.length = 0; obstacles.length = 0;
@@ -870,6 +1014,26 @@ ${text}
         const trunkCap = mesh(new T.SphereGeometry(0.11, 6, 4), mat("#f7fafb")); trunkCap.scale.y = 0.4; trunkCap.position.y = 2.0; snowCaps.push(trunkCap); tree.add(trunkCap);
         obstacles.push({ x: tree.position.x, z: tree.position.z, r: 0.45 });
         island.add(tree);
+      }
+      // mailbox beside the path entrance
+      {
+        const mb = new T.Group(), ma = -0.6 - 0.45, mdist = R * 0.9;
+        mb.position.set(Math.cos(ma) * mdist, 0, Math.sin(ma) * mdist); mb.rotation.y = -ma;
+        const post = mesh(new T.BoxGeometry(0.08, 0.72, 0.08), mat(BARK)); post.position.y = 0.36;
+        const body = mesh(new T.BoxGeometry(0.26, 0.22, 0.4), mat("#c4553f")); body.position.y = 0.82;
+        const roof = mesh(new T.CylinderGeometry(0.13, 0.13, 0.4, 12, 1, false, 0, Math.PI), mat("#c4553f")); roof.rotation.x = Math.PI / 2; roof.rotation.y = Math.PI / 2; roof.position.y = 0.93;
+        const slot = mesh(new T.BoxGeometry(0.27, 0.03, 0.12), mat("#5e2a20")); slot.position.set(0, 0.86, 0.15);
+        mailFlag = new T.Group(); mailFlag.position.set(0.14, 0.78, -0.08);
+        const pole = mesh(new T.BoxGeometry(0.02, 0.26, 0.02), mat("#e8b23c")); pole.position.y = 0.13;
+        const cloth = mesh(new T.BoxGeometry(0.015, 0.08, 0.11), mat("#e8b23c")); cloth.position.set(0, 0.22, -0.05);
+        mailFlag.add(pole, cloth);
+        mailEnvelope = new T.Group();
+        const env = mesh(new T.BoxGeometry(0.26, 0.17, 0.02), mat("#fbf7ee")); const seal = mesh(new T.CylinderGeometry(0.03, 0.03, 0.03, 10), mat("#c4553f")); seal.rotation.x = Math.PI / 2; seal.position.z = 0.015;
+        mailEnvelope.add(env, seal); mailEnvelope.position.y = 1.35;
+        mb.add(post, body, roof, slot, mailFlag, mailEnvelope);
+        mb.traverse(o => { o.userData.mailbox = true; });
+        mailbox = mb; obstacles.push({ x: mb.position.x, z: mb.position.z, r: 0.35 });
+        island.add(mb);
       }
       // stone lantern on the rim
       const lantern = new T.Group();
@@ -1136,6 +1300,9 @@ ${text}
       });
       for (const [id, p] of plants) if (!seen.has(id)) { world.remove(p.group); if (p.drop) world.remove(p.drop); plants.delete(id); }
       firstSync = false;
+      mailUnread = list.filter(e => e.letter && !e.letter.read && !e.example).length;
+      if (mailFlag) mailFlag.rotation.z = mailUnread ? 0 : -Math.PI / 2;
+      if (mailEnvelope) mailEnvelope.visible = mailUnread > 0;
       applySky();
     }
 
@@ -1150,9 +1317,10 @@ ${text}
       const rect = renderer.domElement.getBoundingClientRect();
       ndc.set(((ev.clientX - rect.left) / rect.width) * 2 - 1, -((ev.clientY - rect.top) / rect.height) * 2 + 1);
       ray.setFromCamera(ndc, camera);
-      const targets = mode === "orbit" ? [...pathStones] : []; for (const p of plants.values()) { targets.push(p.group); if (p.drop) targets.push(p.drop); }
+      const targets = mode === "orbit" ? [...pathStones] : []; if (mailbox) targets.push(mailbox); for (const p of plants.values()) { targets.push(p.group); if (p.drop) targets.push(p.drop); }
       const hit = ray.intersectObjects(targets, true)[0];
       if (hit && hit.object.userData.path) { enterWalk(); return; }
+      if (hit && hit.object.userData.mailbox) { if (!openMailbox()) showTip("아직 편지가 없어요. 꽃을 피우면 정원지기가 편지를 보내요"); return; }
       const id = hit && hit.object.userData.entryId;
       const e = id && shown().find(x => x.id === id);
       if (e) openSheet(e);
@@ -1264,7 +1432,7 @@ ${text}
     $("near-open").addEventListener("click", () => { const e = nearId && shown().find(x => x.id === nearId); if (e) openSheet(e); });
     $("near-water").addEventListener("click", async () => {
       const e = nearId && entries.find(x => x.id === nearId); if (!e || !needsWater(e)) return;
-      try { const st = await water(e); showTip(st === 3 ? `${plantName(e.emotions[0].n)}이(가) 피었어요 🌸` : `${STAGES[st]}로 자랐어요`); }
+      try { const st = await water(e); showTip(st === 3 ? `${iga(plantName(e.emotions[0].n))} 피었어요 🌸` : `${STAGES[st]}로 자랐어요`); }
       catch (err) { showTip("물을 주지 못했어요. 다시 시도해 주세요."); }
     });
 
@@ -1322,12 +1490,13 @@ ${text}
       }
       const dt = Math.min(0.05, (now - (lastNow || now)) / 1000); lastNow = now;
       stepFall(dt, now);
+      if (mailEnvelope && mailEnvelope.visible) { mailEnvelope.position.y = 1.35 + (reduce.matches ? 0 : Math.sin(now / 600) * 0.06); mailEnvelope.rotation.y = reduce.matches ? 0 : now / 1400; }
       if (mode === "orbit") controls.update(); else if (mode === "walk") stepWalk(dt, now); else stepTransition(now);
       renderer.render(scene, camera);
     }
     requestAnimationFrame(tick);
     $("garden-hint").textContent = "드래그해서 정원을 돌려 보고, 두 손가락이나 휠로 확대해요. 식물을 누르면 그날의 일기가 열려요. 오래된 식물일수록 섬 가운데에 있어요.";
-    return { update };
+    return { update, tip: showTip };
   }
   let g3d = null;
   try { g3d = initGarden3D(); } catch (e) { g3d = null; $("garden3d").hidden = true; cv.hidden = false; }
@@ -1353,6 +1522,7 @@ ${text}
       for (const [n, [name, f, col]] of Object.entries(E)) if (f === fam) chips.append(chip(name, col, seen.has(+n)));
       box.append(chips); guide.append(box);
     }
+    renderLetters();
     if (openId && $("sheet").open) { const e = shown().find(x => x.id === openId); if (e) fillSheet(e); }
   }
   function chip(name, col, on, s) {
@@ -1387,6 +1557,10 @@ ${text}
     $("sheet-diary").textContent = e.diary || "(일기 내용이 없어요)";
     const hasOrig = e.original && e.original !== e.diary;
     $("sheet-orig-box").hidden = !hasOrig; $("sheet-orig").textContent = e.original || "";
+    const lb = $("sheet-letter");
+    $("sheet-letter-row").hidden = !(e.letter || canGetLetter(e));
+    lb.disabled = pending.has(e.id);
+    lb.textContent = e.letter ? "✉️ 정원지기의 편지 읽기" : pending.has(e.id) ? "정원지기가 편지를 쓰는 중이에요…" : "✉️ 정원지기에게 편지 받기";
     const wb = $("sheet-water");
     wb.hidden = !!e.example || stage === 3;
     wb.disabled = !needsWater(e);
@@ -1400,8 +1574,12 @@ ${text}
   }
   $("sheet-water").onclick = async () => {
     const e = entries.find(x => x.id === openId); if (!e || !needsWater(e)) return;
-    try { const st = await water(e); setMsg($("garden-msg"), st === 3 ? `${plantName(e.emotions[0].n)}이(가) 피었어요 🌸` : `${STAGES[st]}로 자랐어요.`, "ok"); }
+    try { const st = await water(e); setMsg($("garden-msg"), st === 3 ? `${iga(plantName(e.emotions[0].n))} 피었어요 🌸` : `${STAGES[st]}로 자랐어요.`, "ok"); }
     catch (err) { setMsg($("garden-msg"), "물을 주지 못했어요. 다시 시도해 주세요.", "err"); }
+  };
+  $("sheet-letter").onclick = () => {
+    const e = entries.find(x => x.id === openId); if (!e) return;
+    if (e.letter) openLetter(e); else if (canGetLetter(e)) { deliverLetter(e); fillSheet(e); }
   };
   $("sheet-close").onclick = () => sheet.close();
   sheet.addEventListener("click", ev => { if (ev.target === sheet) sheet.close(); });
