@@ -386,7 +386,7 @@ dialog::backdrop { background: rgba(10, 16, 14, 0.45); }
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script>
 (() => {
-  // ---------- Emotion catalogue (감정산책 01~40) ----------
+  // ---------- Emotion catalogue (01~39: 감정산책 목록, 40~51: 감정정원에서 더한 감정, 52: 미확인) ----------
   const FAMILIES = {
     daisy:  ["둥근꽃", "따뜻하게 차오르는 마음"],
     tulip:  ["꽃봉오리", "앞을 바라보는 마음"],
@@ -395,6 +395,7 @@ dialog::backdrop { background: rgba(10, 16, 14, 0.45); }
     thorn:  ["가시풀", "날이 선 마음"],
     moss:   ["이끼돌", "가라앉은 고요"],
     willow: ["버들풀", "기운이 빠진 마음"],
+    vine:   ["덩굴꽃", "관계 속에서 생긴 마음"],
     sprout: ["새싹", "아직 이름 없는 마음"],
   };
   const E = {
@@ -407,10 +408,17 @@ dialog::backdrop { background: rgba(10, 16, 14, 0.45); }
     25:["감탄","tulip","#f0c95a"], 26:["경외","tulip","#6c5fc0"], 27:["수치심","bell","#c06a8f"], 28:["죄책감","bell","#8b5a5a"],
     29:["기대","tulip","#f4a98a"], 30:["희망","tulip","#b8d45a"], 31:["신뢰","moss","#6f9d78"], 32:["혐오","thorn","#7e8a3c"],
     33:["공감적 고통","bell","#6a73c4"], 34:["안도감","moss","#7cc2a6"], 35:["지루함","willow","#b9b4a8"], 36:["호기심","tulip","#3fb3b0"],
-    37:["감격","daisy","#ef6f6a"], 38:["사랑","daisy","#ea5f8f"], 39:["황홀","daisy","#c85bd0"], 40:["미확인","sprout","#d9e0d4"],
+    37:["감격","daisy","#ef6f6a"], 38:["사랑","daisy","#ea5f8f"], 39:["황홀","daisy","#c85bd0"], 
+    40:["놀람","fern","#f4d35e"], 41:["두려움","fern","#4a5a7a"], 42:["실망","vine","#8aa1b8"], 43:["서운함","vine","#d58fa6"],
+    44:["억울함","thorn","#b8433d"], 45:["답답함","thorn","#a8744a"], 46:["아쉬움","vine","#c9a0c8"], 47:["미안함","vine","#e3a587"],
+    48:["뿌듯함","daisy","#f2a93b"], 49:["즐거움","daisy","#ff8c69"], 50:["홀가분함","moss","#a8dcd1"], 51:["막막함","willow","#7d8590"],
+    52:["미확인","sprout","#d9e0d4"],
   };
   const NAME_TO_NUM = Object.fromEntries(Object.entries(E).map(([n, v]) => [v[0].replace(/\s/g, ""), +n]));
-  const TRACKED = Object.keys(E).map(Number).filter(n => n !== 40);
+  const UNKNOWN = 52;
+  const TRACKED = Object.keys(E).map(Number).filter(n => n !== UNKNOWN);
+  // records saved before v2 used 40 for "미확인"; read them as 52 without rewriting stored data
+  const migrate = e => (e && !(e.v >= 2) && Array.isArray(e.emotions)) ? { ...e, emotions: e.emotions.map(x => x.n === 40 ? { ...x, n: UNKNOWN } : x) } : e;
   const STAGES = ["씨앗", "새싹", "꽃봉오리", "꽃"];
   const seedName = n => `${E[n][0]}의 ${FAMILIES[E[n][1]][0]} 씨앗`;
   const plantName = n => `${E[n][0]}의 ${FAMILIES[E[n][1]][0]}`;
@@ -433,7 +441,7 @@ dialog::backdrop { background: rgba(10, 16, 14, 0.45); }
   const LS_KEY = "emotion-garden-v1", LS_WEEKS = "emotion-garden-weeks-v1";
   const localStore = {
     kind: "local",
-    load() { try { entries = JSON.parse(localStorage.getItem(LS_KEY) || "[]"); } catch (e) { entries = []; } try { weeks = JSON.parse(localStorage.getItem(LS_WEEKS) || "{}"); } catch (e) { weeks = {}; } render(); },
+    load() { try { entries = JSON.parse(localStorage.getItem(LS_KEY) || "[]").map(migrate); } catch (e) { entries = []; } try { weeks = JSON.parse(localStorage.getItem(LS_WEEKS) || "{}"); } catch (e) { weeks = {}; } render(); },
     save() { try { localStorage.setItem(LS_KEY, JSON.stringify(entries)); } catch (e) {} },
     async add(e) { entries.push(e); this.save(); render(); },
     async update(id, patch) { entries = entries.map(x => x.id === id ? { ...x, ...patch } : x); this.save(); render(); },
@@ -462,7 +470,7 @@ dialog::backdrop { background: rgba(10, 16, 14, 0.45); }
       col.onSnapshot(snap => {
         settled = true; clearTimeout(timer);
         const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        entries = all.filter(x => x.kind !== "week");
+        entries = all.filter(x => x.kind !== "week").map(migrate);
         weeks = Object.fromEntries(all.filter(x => x.kind === "week").map(({ id, kind, ...w }) => [id, w]));
         render();
       }, () => { settled = true; clearTimeout(timer); setMsg($("garden-msg"), "정원을 불러오지 못했어요. 잠시 후 다시 열어 주세요.", "err"); });
@@ -492,7 +500,7 @@ dialog::backdrop { background: rgba(10, 16, 14, 0.45); }
       if (entries.some(e => e.id === id)) { skipped++; continue; }
       const entry = {
         id, date: raw.date, createdAt: Number(raw.createdAt) || Date.now(),
-        emotions: normEmos(raw.emotions || []).map(x => ({ n: x.n, s: x.s })),
+        emotions: normEmos(migrate(raw).emotions || []).map(x => ({ n: x.n, s: x.s })), v: 2,
         title: String(raw.title || "").slice(0, 40) || "되찾은 하루", diary: String(raw.diary || ""),
         note: String(raw.note || ""), original: String(raw.original || ""),
       };
@@ -520,7 +528,7 @@ dialog::backdrop { background: rgba(10, 16, 14, 0.45); }
 감정 목록(번호:이름): ${EMO_LIST}
 
 규칙:
-- 글에 드러난 감정을 강한 순서로 1~3개 골라 번호로 적어. 도저히 알 수 없으면 40(미확인).
+- 글에 드러난 감정을 강한 순서로 1~3개 골라 번호로 적어. 도저히 알 수 없으면 52(미확인).
 - 세기는 1(아주 약함)~5(아주 강함).
 - "일기": 사용자의 글을 바탕으로 사용자 본인이 쓴 1인칭 일기로 다듬어 3~6문장. 반말 일기체. 글에 없는 사건을 지어내지 말고, 느낀 감정에 부드럽게 이름을 붙여줘.
 - "제목": 일기 제목, 15자 이내.
@@ -541,11 +549,11 @@ ${text}
     for (const e of list.slice(0, 3)) {
       let n, s = 3;
       if (e && typeof e === "object") { n = e["번호"] ?? e.n ?? e["감정"]; s = e["세기"] ?? e.s ?? 3; } else n = e;
-      if (typeof n === "string" && !/^\d+$/.test(n.trim())) n = NAME_TO_NUM[n.replace(/\s/g, "")] || 40;
-      n = parseInt(n, 10); if (!E[n]) n = 40;
+      if (typeof n === "string" && !/^\d+$/.test(n.trim())) n = NAME_TO_NUM[n.replace(/\s/g, "")] || UNKNOWN;
+      n = parseInt(n, 10); if (!E[n]) n = UNKNOWN;
       if (!out.some(x => x.n === n)) out.push({ n, s: clamp(parseInt(s, 10) || 3, 1, 5) });
     }
-    return out.length ? out : [{ n: 40, s: 3 }];
+    return out.length ? out : [{ n: UNKNOWN, s: 3 }];
   }
 
   let draft = null; // { emotions, title, diary, note, original }
@@ -644,7 +652,7 @@ ${text}
     const msg = $("plant-msg");
     if (!draft.emotions.length) { setMsg(msg, "감정을 하나 이상 골라 주세요.", "err"); renderPicker(true); return; }
     const entry = {
-      id: newId(), date: today(), createdAt: Date.now(), waterDays: [today()],
+      id: newId(), v: 2, date: today(), createdAt: Date.now(), waterDays: [today()],
       emotions: draft.emotions.map(x => ({ n: x.n, s: x.s })),
       title: ($("r-title").value.trim() || E[draft.emotions[0].n][0] + "의 하루").slice(0, 40),
       diary: $("r-diary").value.trim(), note: draft.note, original: draft.original,
@@ -731,7 +739,7 @@ ${care}번의 물을 주며 돌봐준 덕분에 오늘 꽃이 되었어요.
     letterId = e.id;
     $("letter-meta").textContent = `${md(ymd(new Date(e.letter.at)))}에 도착한 편지`;
     $("letter-title").textContent = `${iga(plantName(e.emotions[0].n))} 피었어요`;
-    $("letter-stamp").textContent = { daisy: "🌼", tulip: "🌷", bell: "🔔", fern: "🌿", thorn: "🌵", moss: "🪨", willow: "🍃", sprout: "🌱" }[E[e.emotions[0].n][1]] || "🌸";
+    $("letter-stamp").textContent = { daisy: "🌼", tulip: "🌷", bell: "🔔", fern: "🌿", thorn: "🌵", moss: "🪨", willow: "🍃", vine: "🌺", sprout: "🌱" }[E[e.emotions[0].n][1]] || "🌸";
     $("letter-body").textContent = e.letter.text;
     if ($("sheet").open) $("sheet").close();
     $("letter").showModal();
@@ -751,11 +759,11 @@ ${care}번의 물을 주며 돌봐준 덕분에 오늘 꽃이 되었어요.
     { key: "bright", name: "밝음", fams: ["daisy", "tulip"], color: "#f0b53c" },
     { key: "calm", name: "고요", fams: ["moss"], color: "#7cc2a6" },
     { key: "wave", name: "출렁임", fams: ["fern", "thorn"], color: "#d9704a" },
-    { key: "low", name: "가라앉음", fams: ["bell", "willow"], color: "#6a7fc4" },
+    { key: "low", name: "가라앉음", fams: ["bell", "willow", "vine"], color: "#6a7fc4" },
     { key: "unknown", name: "아직 모름", fams: ["sprout"], color: "#b9c2b6" },
   ];
   const DAYS = ["월", "화", "수", "목", "금", "토", "일"];
-  const STAMP = { daisy: "🌼", tulip: "🌷", bell: "🔔", fern: "🌿", thorn: "🌵", moss: "🪨", willow: "🍃", sprout: "🌱" };
+  const STAMP = { daisy: "🌼", tulip: "🌷", bell: "🔔", fern: "🌿", thorn: "🌵", moss: "🪨", willow: "🍃", vine: "🌺", sprout: "🌱" };
   let weekOffset = 0;
   function weekStartOf(d) { const x = new Date(d); x.setHours(12, 0, 0, 0); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; }
   function weekDays(offset) { const s = weekStartOf(new Date()); s.setDate(s.getDate() + offset * 7); return Array.from({ length: 7 }, (_, i) => { const d = new Date(s); d.setDate(s.getDate() + i); return ymd(d); }); }
@@ -1103,6 +1111,16 @@ ${lines}
           const side = i % 2 ? 1 : -1, spread = (6 + i * 2.2) * side, drop = h * (0.45 + 0.1 * (i % 3));
           ctx.strokeStyle = i % 3 === 0 && p.accent ? a : c; ctx.lineWidth = 1.6;
           ctx.beginPath(); ctx.moveTo(0, -h); ctx.quadraticCurveTo(spread * 1.2, -h - 6, spread, -h + drop); ctx.stroke();
+        }
+        break;
+      }
+      case "vine": {
+        ctx.strokeStyle = "#8a6a4a"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -h); ctx.stroke();
+        ctx.strokeStyle = colors.leaf; ctx.lineWidth = 1.8; ctx.beginPath();
+        for (let t = 0; t <= 1.001; t += 0.04) { const yy = -h * t, xx = Math.sin(t * 14) * 5; t === 0 ? ctx.moveTo(xx, yy) : ctx.lineTo(xx, yy); } ctx.stroke();
+        for (let i = 0; i < 2 + Math.ceil(p.s / 2); i++) {
+          const t = 0.35 + i * 0.2, yy = -h * Math.min(0.98, t), xx = Math.sin(t * 14) * 5 + (i % 2 ? 6 : -6);
+          ctx.fillStyle = i === 1 && p.accent ? a : c; ctx.beginPath(); ctx.moveTo(xx, yy); ctx.lineTo(xx - 5, yy - 7); ctx.quadraticCurveTo(xx, yy - 10, xx + 5, yy - 7); ctx.closePath(); ctx.fill();
         }
         break;
       }
@@ -1495,6 +1513,32 @@ ${lines}
               g.add(mesh(new T.TubeGeometry(curve, 10, 0.018, 4, false), mat(i % 3 === 0 && acc ? acc : c)));
             }
             top = h + 0.3;
+            break;
+          }
+          case "vine": {
+            // a morning-glory-like vine winding up a little bamboo stake
+            const h = 1.45 * k;
+            const stake = mesh(new T.CylinderGeometry(0.025, 0.03, h + 0.15, 8), mat("#b89a6a")); stake.position.y = (h + 0.15) / 2; g.add(stake);
+            const turns = 2.6, pts = [];
+            for (let i = 0; i <= 60; i++) { const t = i / 60, a = t * turns * 6.283; pts.push(new T.Vector3(Math.cos(a) * 0.09, t * h, Math.sin(a) * 0.09)); }
+            const helix = new T.CatmullRomCurve3(pts);
+            g.add(mesh(new T.TubeGeometry(helix, 80, 0.016, 6, false), mat(LEAF)));
+            for (let i = 0; i < 7; i++) {
+              const t = 0.12 + i * 0.12, p = helix.getPoint(t), a = t * turns * 6.283;
+              const lf = mesh(new T.SphereGeometry(1, 12, 8), mat(LEAF)); lf.scale.set(0.1, 0.015, 0.075);
+              lf.position.set(p.x + Math.cos(a) * 0.07, p.y, p.z + Math.sin(a) * 0.07); lf.rotation.set(0, -a, 0.5); g.add(lf);
+            }
+            const nf = 1 + Math.ceil(main.s / 2);
+            for (let i = 0; i < nf; i++) {
+              const t = 0.45 + i * (0.5 / nf), p = helix.getPoint(t), a = t * turns * 6.283 + 0.6;
+              const fl = new T.Group(); fl.position.set(p.x + Math.cos(a) * 0.1, p.y, p.z + Math.sin(a) * 0.1);
+              fl.lookAt(new T.Vector3(Math.cos(a) * 3, p.y + 1.2, Math.sin(a) * 3));
+              const trumpet = mesh(new T.ConeGeometry(0.13 * k, 0.18 * k, 18, 1, true), mat(i === nf - 1 && acc ? acc : c, { side: T.DoubleSide }));
+              trumpet.rotation.x = -Math.PI / 2; trumpet.position.z = 0.05; fl.add(trumpet);
+              const throat = mesh(new T.SphereGeometry(0.03, 10, 8), mat("#fff4d6")); throat.position.z = -0.03; fl.add(throat);
+              g.add(fl);
+            }
+            top = h + 0.2;
             break;
           }
           default: {
