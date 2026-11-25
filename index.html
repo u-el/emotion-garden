@@ -1163,7 +1163,11 @@ ${lines}
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setClearColor(0x000000, 0);
     renderer.shadowMap.enabled = true; renderer.shadowMap.type = T.PCFSoftShadowMap;
+    renderer.outputEncoding = T.sRGBEncoding;
+    renderer.toneMapping = T.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.12;
     host.append(renderer.domElement);
+    const lin = c => new T.Color(c).convertSRGBToLinear();
+    const coarse = matchMedia("(pointer: coarse)").matches;
 
     const scene = new T.Scene();
     const camera = new T.PerspectiveCamera(38, 1, 0.1, 300);
@@ -1177,32 +1181,68 @@ ${lines}
     controls.addEventListener("end", () => { clearTimeout(resumeTimer); resumeTimer = setTimeout(() => { controls.autoRotate = !reduce.matches; }, 9000); });
 
     const hemi = new T.HemisphereLight(0xffffff, 0x444444, 0.7); scene.add(hemi);
+    const rim = new T.DirectionalLight(0xffffff, 0.35); rim.position.set(-10, 7, -12); scene.add(rim);
     const sun = new T.DirectionalLight(0xffffff, 1); sun.position.set(8, 16, 6); sun.castShadow = true;
-    sun.shadow.mapSize.set(1024, 1024); sun.shadow.bias = -0.0008;
+    const SHADOW = coarse ? 1024 : 2048;
+    sun.shadow.mapSize.set(SHADOW, SHADOW); sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.02;
     Object.assign(sun.shadow.camera, { left: -16, right: 16, top: 16, bottom: -16, near: 1, far: 50 });
     scene.add(sun);
 
     const matCache = new Map();
     const mat = (c, opts) => {
       const key = c + JSON.stringify(opts || {});
-      if (!matCache.has(key)) matCache.set(key, new T.MeshStandardMaterial(Object.assign({ color: new T.Color(c), roughness: 0.85, flatShading: true }, opts || {})));
+      if (!opts && SPECIAL[c]) return SPECIAL[c];
+      if (!matCache.has(key)) matCache.set(key, new T.MeshStandardMaterial(Object.assign({ color: lin(c), roughness: 0.78, flatShading: c === SOIL_DARK }, opts || {})));
       return matCache.get(key);
     };
     const mesh = (geo, m, shadow = true) => { const o = new T.Mesh(geo, m); o.castShadow = shadow; o.receiveShadow = true; return o; };
     const BARK = "#6b4f3a", LEAF = "#5b8a5e", SOIL = "#7a634a", SOIL_DARK = "#5e4a37", GRASS = "#86b37a", STONE = "#a7a69b";
+    // painted textures, drawn once on canvases (grey-scale so material colours tint them)
+    function canvasTex(size, draw, rep) {
+      const c = document.createElement("canvas"); c.width = c.height = size; draw(c.getContext("2d"), size);
+      const t = new T.CanvasTexture(c); t.wrapS = t.wrapT = T.RepeatWrapping; if (rep) t.repeat.set(rep[0], rep[1]);
+      t.encoding = T.sRGBEncoding; t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1); return t;
+    }
+    let tSeed = 7; const tr = () => (tSeed = (tSeed * 16807) % 2147483647) / 2147483647;
+    const grassTex = canvasTex(512, (x, n) => {
+      x.fillStyle = "#e9e9e9"; x.fillRect(0, 0, n, n);
+      for (let i = 0; i < 2600; i++) { const v = Math.round(212 + tr() * 43); x.strokeStyle = `rgb(${v},${v},${v})`; x.lineWidth = 1 + tr() * 1.5; const px = tr() * n, py = tr() * n, a = -1.57 + (tr() - 0.5) * 0.9, l = 3 + tr() * 7; x.beginPath(); x.moveTo(px, py); x.lineTo(px + Math.cos(a) * l, py + Math.sin(a) * l); x.stroke(); }
+      for (let i = 0; i < 40; i++) { const v = Math.round(205 + tr() * 50); x.fillStyle = `rgba(${v},${v},${v},0.35)`; x.beginPath(); x.arc(tr() * n, tr() * n, 10 + tr() * 30, 0, 7); x.fill(); }
+    });
+    const soilTex = canvasTex(256, (x, n) => {
+      for (let y = 0; y < n; y += 4) { const v = Math.round(185 + tr() * 55); x.fillStyle = `rgb(${v},${v},${v})`; x.fillRect(0, y, n, 4); }
+      for (let i = 0; i < 260; i++) { const v = Math.round(150 + tr() * 105); x.fillStyle = `rgb(${v},${v},${v})`; x.beginPath(); x.ellipse(tr() * n, tr() * n, 1.5 + tr() * 4, 1 + tr() * 2.5, 0, 0, 7); x.fill(); }
+    }, [10, 1]);
+    const stoneTex = canvasTex(256, (x, n) => {
+      x.fillStyle = "#dedede"; x.fillRect(0, 0, n, n);
+      for (let i = 0; i < 500; i++) { const v = Math.round(170 + tr() * 85); x.fillStyle = `rgba(${v},${v},${v},0.6)`; x.beginPath(); x.arc(tr() * n, tr() * n, 2 + tr() * 9, 0, 7); x.fill(); }
+    });
+    const grassTopMat = new T.MeshStandardMaterial({ color: lin(GRASS), map: grassTex, roughness: 0.95 });
+    const soilSideMat = new T.MeshStandardMaterial({ color: lin(SOIL), map: soilTex, roughness: 0.95 });
+    const bladeMat = new T.MeshStandardMaterial({ color: lin(GRASS), roughness: 0.9 });
+    const SPECIAL = { [STONE]: new T.MeshStandardMaterial({ color: lin(STONE), map: stoneTex, roughness: 0.9, flatShading: true }) };
+    const tmpObj = new T.Object3D();
+    const glowTex = canvasTex(128, (x, n) => { const g = x.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2); g.addColorStop(0, "rgba(255,255,255,1)"); g.addColorStop(0.22, "rgba(255,255,255,0.5)"); g.addColorStop(0.55, "rgba(255,255,255,0.12)"); g.addColorStop(1, "rgba(255,255,255,0)"); x.fillStyle = g; x.fillRect(0, 0, n, n); });
+    function glow(color, size, opacity) {
+      const sp = new T.Sprite(new T.SpriteMaterial({ map: glowTex, color: lin(color), transparent: true, opacity, blending: T.AdditiveBlending, depthWrite: false }));
+      sp.scale.set(size, size, 1); sp.raycast = () => {}; return sp;
+    }
     const rnd = (seed) => { let s = Math.floor(hash(seed) * 2 ** 31) || 1; return () => (s = (s * 16807) % 2147483647) / 2147483647; };
 
     // ---- island ----
     const world = new T.Group(); scene.add(world);
     let island = null, islandR = 0; const pathStones = [], canopies = [], snowCaps = [], obstacles = [];
     let mailbox = null, mailFlag = null, mailEnvelope = null, mailUnread = 0;
+    const floaters = []; let cloudRing = null;
+    const cloudMat = new T.MeshStandardMaterial({ color: 0xffffff, roughness: 1, transparent: true, opacity: 0.9, depthWrite: false });
     function buildIsland(R) {
       if (island) { world.remove(island); island.traverse(o => o.geometry && o.geometry.dispose()); }
       island = new T.Group(); islandR = R; pathStones.length = 0; canopies.length = 0; snowCaps.length = 0; obstacles.length = 0;
       const r = rnd("island" + R);
       const top = new T.CylinderGeometry(R, R * 0.97, 0.35, 64, 1);
-      const grass = mesh(top, mat(GRASS, { flatShading: false }), false); grass.position.y = -0.17; island.add(grass);
-      const soil = mesh(new T.CylinderGeometry(R * 0.97, R * 0.9, 0.9, 40, 1), mat(SOIL), false); soil.position.y = -0.8; island.add(soil);
+      grassTex.repeat.set(R / 2.2, R / 2.2);
+      const grass = mesh(top, grassTopMat, false); grass.position.y = -0.17; island.add(grass);
+      const soil = mesh(new T.CylinderGeometry(R * 0.97, R * 0.9, 0.9, 48, 1), soilSideMat, false); soil.position.y = -0.8; island.add(soil);
       const cone = new T.ConeGeometry(R * 0.9, R * 0.95, 20, 3); cone.rotateX(Math.PI);
       const cp = cone.attributes.position;
       for (let i = 0; i < cp.count; i++) { const y = cp.getY(i); if (y < R * 0.47) { cp.setX(i, cp.getX(i) * (0.85 + r() * 0.3)); cp.setZ(i, cp.getZ(i) * (0.85 + r() * 0.3)); cp.setY(i, y + (r() - 0.5) * 0.4); } }
@@ -1221,11 +1261,38 @@ ${lines}
         const rock = mesh(new T.IcosahedronGeometry(0.25 + r() * 0.35, 0), mat(STONE)); rock.scale.y = 0.6;
         rock.position.set(Math.cos(a) * d, 0.05, Math.sin(a) * d); rock.rotation.set(r(), r() * 3, r()); island.add(rock);
       }
-      for (let i = 0; i < Math.round(R * R * 0.9); i++) {
-        const a = r() * 6.28, d = Math.sqrt(r()) * R * 0.95;
-        const tuft = mesh(new T.ConeGeometry(0.05, 0.22 + r() * 0.15, 4), mat(i % 3 ? GRASS : LEAF), false);
-        tuft.position.set(Math.cos(a) * d, 0.1, Math.sin(a) * d); tuft.rotation.z = (r() - 0.5) * 0.5; island.add(tuft);
+      {
+        const bladeGeo = new T.ConeGeometry(0.016, 0.22, 3); bladeGeo.translate(0, 0.11, 0);
+        const nB = Math.round(R * R * (coarse ? 9 : 14));
+        const blades = new T.InstancedMesh(bladeGeo, bladeMat, nB); blades.receiveShadow = true;
+        for (let i = 0; i < nB; i++) {
+          const a = r() * 6.28, d = Math.sqrt(r()) * R * 0.96;
+          tmpObj.position.set(Math.cos(a) * d, -0.01, Math.sin(a) * d);
+          tmpObj.rotation.set((r() - 0.5) * 0.5, r() * 6.28, (r() - 0.5) * 0.5);
+          const h = 0.45 + r() * 0.75; tmpObj.scale.set(1, h, 1); tmpObj.updateMatrix(); blades.setMatrixAt(i, tmpObj.matrix);
+          const v = 0.72 + r() * 0.4; blades.setColorAt(i, new T.Color(v, v * (1 + (r() - 0.5) * 0.12), v * 0.92));
+        }
+        blades.instanceColor.needsUpdate = true; island.add(blades);
       }
+      // floating islets and clouds around the diorama
+      floaters.length = 0;
+      for (let i = 0; i < 3; i++) {
+        const fi = new T.Group(), fr = 0.45 + r() * 0.4, fa = 1.2 + i * 2.1 + r() * 0.5, fd = R * (1.35 + r() * 0.25);
+        const ft = mesh(new T.CylinderGeometry(fr, fr * 0.95, 0.16, 20), grassTopMat, false);
+        const fu = mesh(new T.ConeGeometry(fr * 0.92, fr * 1.6, 7), mat(SOIL_DARK), false); fu.rotation.x = Math.PI; fu.position.y = -0.88 * fr - 0.08;
+        fi.add(ft, fu);
+        if (r() < 0.7) { const fs = mesh(new T.IcosahedronGeometry(fr * 0.35, 0), mat(STONE)); fs.position.set(fr * 0.2, 0.12, 0); fs.scale.y = 0.7; fi.add(fs); }
+        fi.position.set(Math.cos(fa) * fd, -0.6 + r() * 1.8, Math.sin(fa) * fd);
+        fi.userData = { baseY: fi.position.y, phase: r() * 6.28 }; floaters.push(fi); island.add(fi);
+      }
+      cloudRing = new T.Group();
+      for (let i = 0; i < 5; i++) {
+        const cl = new T.Group(), ca = i / 5 * 6.283 + r() * 0.6, cd = R * (1.5 + r() * 0.5);
+        for (let k = 0; k < 4; k++) { const puff = new T.Mesh(new T.SphereGeometry(0.5 + r() * 0.45, 14, 10), cloudMat); puff.position.set((k - 1.5) * 0.55, r() * 0.25, (r() - 0.5) * 0.4); puff.scale.y = 0.65; cl.add(puff); }
+        cl.position.set(Math.cos(ca) * cd, -2.2 + r() * 2.6, Math.sin(ca) * cd); cl.rotation.y = -ca; cl.scale.setScalar(0.7 + r() * 0.45);
+        cloudRing.add(cl);
+      }
+      island.add(cloudRing);
       // two seasonal trees on the rim
       for (const ta of [2.5, 4.1]) {
         const tree = new T.Group(), td = R * 0.8;
@@ -1241,7 +1308,7 @@ ${lines}
         }
         ends.push(new T.Vector3(0, 2.25, 0));
         ends.forEach((v, i) => {
-          const cn = mesh(new T.IcosahedronGeometry(0.45 + r() * 0.25, 0), mat("#ffffff")); cn.position.copy(v); cn.rotation.set(r(), r(), r());
+          const cn = mesh(new T.IcosahedronGeometry(0.45 + r() * 0.25, 1), mat("#ffffff", { flatShading: true })); cn.position.copy(v); cn.rotation.set(r(), r(), r());
           cn.userData.canopy = i; canopies.push(cn); tree.add(cn);
           const cap = mesh(new T.SphereGeometry(0.12, 6, 4), mat("#f7fafb")); cap.scale.set(1.6, 0.45, 1.6); cap.position.set(v.x * 0.85, v.y - 0.2, v.z * 0.85);
           snowCaps.push(cap); tree.add(cap);
@@ -1264,7 +1331,7 @@ ${lines}
         mailFlag.add(pole, cloth);
         mailEnvelope = new T.Group();
         const env = mesh(new T.BoxGeometry(0.26, 0.17, 0.02), mat("#fbf7ee")); const seal = mesh(new T.CylinderGeometry(0.03, 0.03, 0.03, 10), mat("#c4553f")); seal.rotation.x = Math.PI / 2; seal.position.z = 0.015;
-        mailEnvelope.add(env, seal); mailEnvelope.position.y = 1.35;
+        mailEnvelope.add(env, seal, glow("#fff1c4", 0.9, 0.55)); mailEnvelope.position.y = 1.35;
         mb.add(post, body, roof, slot, mailFlag, mailEnvelope);
         mb.traverse(o => { o.userData.mailbox = true; });
         mailbox = mb; obstacles.push({ x: mb.position.x, z: mb.position.z, r: 0.35 });
@@ -1281,6 +1348,7 @@ ${lines}
       const roof = mesh(new T.ConeGeometry(0.38, 0.28, 6), mat(STONE)); roof.position.y = 1.39;
       const knob = mesh(new T.SphereGeometry(0.06, 6, 4), mat(STONE)); knob.position.y = 1.56;
       lantern.add(p1, p2, p3, box, roof, knob);
+      lanternGlow = glow("#ffc46b", 2.6, 0); lanternGlow.position.y = 1.1; lantern.add(lanternGlow);
       lanternLight.position.set(lantern.position.x, 1.15, lantern.position.z);
       island.add(lantern);
       world.add(island);
@@ -1293,16 +1361,17 @@ ${lines}
       const dir = camera.position.clone().sub(controls.target).normalize();
       camera.position.copy(controls.target).addScaledVector(dir, dist);
     }
-    const lanternMat = new T.MeshStandardMaterial({ color: 0xfff1c4, emissive: 0xffc46b, emissiveIntensity: 0, roughness: 0.6, flatShading: true });
-    const lanternLight = new T.PointLight(0xffc46b, 0, 7, 2); scene.add(lanternLight);
+    const lanternMat = new T.MeshStandardMaterial({ color: lin(0xfff1c4), emissive: lin(0xffc46b), emissiveIntensity: 0, roughness: 0.6, flatShading: true });
+    const lanternLight = new T.PointLight(lin(0xffc46b), 0, 8, 2); scene.add(lanternLight);
+    let lanternGlow = null;
 
     // ---- plant builders (base at y = 0) ----
     function stemTube(h, bend, r = 0.035, to) {
       const end = to || new T.Vector3(0, h, 0);
       const curve = new T.QuadraticBezierCurve3(new T.Vector3(0, 0, 0), new T.Vector3(bend, h * 0.5, 0), end);
-      return { m: mesh(new T.TubeGeometry(curve, 10, r, 5, false), mat(LEAF)), curve };
+      return { m: mesh(new T.TubeGeometry(curve, 12, r, 7, false), mat(LEAF)), curve };
     }
-    function leafMesh(size, col) { const l = mesh(new T.SphereGeometry(1, 8, 5), mat(col || LEAF)); l.scale.set(size * 0.45, size * 0.08, size * 0.2); return l; }
+    function leafMesh(size, col) { const l = mesh(new T.SphereGeometry(1, 14, 8), mat(col || LEAF)); l.scale.set(size * 0.45, size * 0.08, size * 0.2); return l; }
     function addLeaf(g, y, ang, size, col) { const l = leafMesh(size, col); l.position.set(Math.cos(ang) * size * 0.35, y, Math.sin(ang) * size * 0.35); l.rotation.set(0, -ang, 0.45); g.add(l); }
 
     function buildPlant(e) {
@@ -1323,7 +1392,7 @@ ${lines}
       } else if (stage === 2) {
         const h = 1.1 * k; g.add(stemTube(h, 0.06).m);
         addLeaf(g, h * 0.35, r() * 6, 0.45); addLeaf(g, h * 0.55, r() * 6, 0.4);
-        const bud = mesh(new T.SphereGeometry(0.13 * k, 10, 8), mat(c)); bud.scale.y = 1.7; bud.position.y = h + 0.14 * k; g.add(bud);
+        const bud = mesh(new T.SphereGeometry(0.13 * k, 16, 12), mat(c)); bud.scale.y = 1.7; bud.position.y = h + 0.14 * k; g.add(bud);
         for (let i = 0; i < 3; i++) { const sp = mesh(new T.ConeGeometry(0.05, 0.16, 4), mat(LEAF)); sp.position.set(Math.cos(i * 2.1) * 0.07, h + 0.02, Math.sin(i * 2.1) * 0.07); sp.rotation.set(Math.sin(i * 2.1) * 0.5, 0, -Math.cos(i * 2.1) * 0.5); g.add(sp); }
         top = h + 0.4 * k;
       } else {
@@ -1332,15 +1401,15 @@ ${lines}
             const h = 1.5 * k; g.add(stemTube(h, 0.1).m); addLeaf(g, h * 0.3, r() * 6, 0.5); addLeaf(g, h * 0.5, r() * 6, 0.45);
             const head = new T.Group(); head.position.y = h; head.rotation.x = 0.35;
             const pr = 0.24 * k;
-            for (let i = 0; i < 11; i++) { const pt = mesh(new T.SphereGeometry(1, 7, 5), mat(c)); pt.scale.set(pr * 0.38, 0.03, pr * 0.9); const a = i / 11 * 6.283; pt.position.set(Math.sin(a) * pr, 0, Math.cos(a) * pr); pt.rotation.y = a; head.add(pt); }
-            const ctr = mesh(new T.SphereGeometry(pr * 0.45, 10, 6), mat(acc || "#7a5a2a")); ctr.scale.y = 0.55; head.add(ctr);
+            for (let i = 0; i < 11; i++) { const pt = mesh(new T.SphereGeometry(1, 14, 8), mat(c)); pt.scale.set(pr * 0.38, 0.035, pr * 0.9); const a = i / 11 * 6.283; pt.position.set(Math.sin(a) * pr, 0, Math.cos(a) * pr); pt.rotation.y = a; head.add(pt); }
+            const ctr = mesh(new T.SphereGeometry(pr * 0.45, 16, 10), mat(acc || "#7a5a2a")); ctr.scale.y = 0.55; head.add(ctr);
             g.add(head); top = h + 0.35;
             break;
           }
           case "tulip": {
             const h = 1.35 * k; g.add(stemTube(h, -0.08).m); addLeaf(g, h * 0.2, 0.5, 0.65); addLeaf(g, h * 0.3, 3.6, 0.55);
             const pts = [[0, 0], [0.11, 0.02], [0.17, 0.1], [0.18, 0.22], [0.15, 0.33], [0.1, 0.4]].map(([x, y]) => new T.Vector2(x * k * 1.3, y * k * 1.3));
-            const cup = mesh(new T.LatheGeometry(pts, 6), mat(c, { side: T.DoubleSide })); cup.position.y = h - 0.02; g.add(cup);
+            const cup = mesh(new T.LatheGeometry(pts, 18), mat(c, { side: T.DoubleSide })); cup.position.y = h - 0.02; g.add(cup);
             if (acc) { const in1 = mesh(new T.SphereGeometry(0.06 * k, 6, 5), mat(acc)); in1.position.y = h + 0.12 * k; g.add(in1); }
             top = h + 0.6 * k;
             break;
@@ -1351,7 +1420,7 @@ ${lines}
             const n = 1 + Math.ceil(main.s / 2);
             for (let i = 0; i < n; i++) {
               const p = s.curve.getPoint(0.55 + i * (0.45 / n));
-              const bell = mesh(new T.ConeGeometry(0.13 * k, 0.24 * k, 8, 1, true), mat(i === n - 1 && acc ? acc : c, { side: T.DoubleSide }));
+              const bell = mesh(new T.ConeGeometry(0.13 * k, 0.24 * k, 16, 1, true), mat(i === n - 1 && acc ? acc : c, { side: T.DoubleSide }));
               bell.position.set(p.x + 0.02, p.y - 0.2 * k, p.z); g.add(bell);
               const tip = mesh(new T.SphereGeometry(0.03, 5, 4), mat(c)); tip.position.set(p.x + 0.02, p.y - 0.06 * k, p.z); g.add(tip);
             }
@@ -1376,7 +1445,7 @@ ${lines}
           }
           case "thorn": {
             const h = 1.2 * k, w = 0.2 * k;
-            const body = mesh(new T.CylinderGeometry(w * 0.9, w, h, 8), mat(LEAF)); body.position.y = h / 2; g.add(body);
+            const body = mesh(new T.CylinderGeometry(w * 0.9, w, h, 14), mat(LEAF)); body.position.y = h / 2; g.add(body);
             const cap = mesh(new T.SphereGeometry(w * 0.9, 8, 5, 0, 6.29, 0, Math.PI / 2), mat(LEAF)); cap.position.y = h; g.add(cap);
             const arm = mesh(new T.CylinderGeometry(w * 0.55, w * 0.6, h * 0.4, 7), mat(LEAF)); arm.position.set(w * 1.3, h * 0.55, 0); g.add(arm);
             const armJ = mesh(new T.CylinderGeometry(w * 0.5, w * 0.5, w * 1.3, 6), mat(LEAF)); armJ.rotation.z = Math.PI / 2; armJ.position.set(w * 0.75, h * 0.38, 0); g.add(armJ);
@@ -1388,7 +1457,7 @@ ${lines}
           }
           case "moss": {
             const rk = mesh(new T.IcosahedronGeometry(0.42 * k, 0), mat(STONE)); rk.scale.y = 0.6; rk.position.y = 0.12; rk.rotation.y = r() * 3; g.add(rk);
-            const moss = mesh(new T.SphereGeometry(0.4 * k, 10, 6, 0, 6.29, 0, Math.PI / 2), mat(c)); moss.scale.y = 0.55; moss.position.y = 0.2 * k; g.add(moss);
+            const moss = mesh(new T.SphereGeometry(0.4 * k, 18, 10, 0, 6.29, 0, Math.PI / 2), mat(c)); moss.scale.y = 0.55; moss.position.y = 0.2 * k; g.add(moss);
             for (let i = 0; i < 6; i++) { const d = mesh(new T.SphereGeometry(0.035, 5, 4), mat(acc || LEAF)); const a = r() * 6.28, rr = r() * 0.3 * k; d.position.set(Math.cos(a) * rr, 0.2 * k + 0.2 * k * (1 - rr / (0.35 * k)), Math.sin(a) * rr); g.add(d); }
             const sp = stemTube(0.3, 0.05, 0.02); sp.m.position.set(0.1, 0.3 * k, 0); g.add(sp.m);
             top = 0.55 * k + 0.2;
@@ -1400,7 +1469,7 @@ ${lines}
             for (let i = 0; i < n; i++) {
               const a = i / n * 6.283 + r() * 0.3, spread = (0.3 + r() * 0.25) * k, drop = (0.7 + r() * 0.4) * k;
               const curve = new T.QuadraticBezierCurve3(new T.Vector3(0, h, 0), new T.Vector3(Math.cos(a) * spread * 0.8, h + 0.18, Math.sin(a) * spread * 0.8), new T.Vector3(Math.cos(a) * spread, h - drop, Math.sin(a) * spread));
-              g.add(mesh(new T.TubeGeometry(curve, 8, 0.018, 3, false), mat(i % 3 === 0 && acc ? acc : c)));
+              g.add(mesh(new T.TubeGeometry(curve, 10, 0.018, 4, false), mat(i % 3 === 0 && acc ? acc : c)));
             }
             top = h + 0.3;
             break;
@@ -1411,18 +1480,19 @@ ${lines}
           }
         }
       }
+      if (stage === 3) { const fg = glow(c, 1.0, 0); fg.position.y = Math.max(0.3, top - 0.2); fg.userData.flowerGlow = true; g.add(fg); g.userData.glow = fg; }
       g.traverse(o => { o.userData.entryId = e.id; });
       g.userData.top = top;
       return g;
     }
 
     // ---- water drops & fireflies ----
-    const dropMat = new T.MeshStandardMaterial({ color: 0x5aa0e6, emissive: 0x1d5fa8, emissiveIntensity: 0.35, roughness: 0.2, transparent: true, opacity: 0.92 });
+    const dropMat = new T.MeshStandardMaterial({ color: lin(0x5aa0e6), emissive: lin(0x1d5fa8), emissiveIntensity: 0.5, roughness: 0.15, metalness: 0.1, transparent: true, opacity: 0.92 });
     function makeDrop() {
       const d = new T.Group();
       const b = new T.Mesh(new T.SphereGeometry(0.09, 10, 8), dropMat);
       const t = new T.Mesh(new T.ConeGeometry(0.088, 0.16, 10), dropMat); t.position.y = 0.11;
-      d.add(b, t); return d;
+      d.add(b, t, glow("#7db8ff", 0.55, 0.5)); return d;
     }
     const flyMat = new T.MeshBasicMaterial({ color: 0xffeb8a, transparent: true, opacity: 0.9, blending: T.AdditiveBlending, depthWrite: false });
     const flies = new T.Group(); scene.add(flies);
@@ -1430,10 +1500,9 @@ ${lines}
       while (flies.children.length) flies.remove(flies.children[0]);
       const r = rnd("flies");
       for (let i = 0; i < 26; i++) {
-        const f = new T.Mesh(new T.SphereGeometry(0.05, 6, 4), flyMat);
+        const f = new T.Mesh(new T.SphereGeometry(0.035, 6, 4), flyMat);
         f.userData = { a: r() * 6.28, d: Math.sqrt(r()) * R, y: 0.5 + r() * 2.6, p: r() * 6.28 };
-        const halo = new T.Mesh(new T.SphereGeometry(0.12, 8, 6), new T.MeshBasicMaterial({ color: 0xffd25a, transparent: true, opacity: 0.08, blending: T.AdditiveBlending, depthWrite: false }));
-        f.add(halo); flies.add(f);
+        f.add(glow("#ffe27a", 0.5, 0.85)); flies.add(f);
       }
     }
 
@@ -1442,13 +1511,18 @@ ${lines}
     function applySky() {
       const s = SKIES[skyKey];
       host.style.background = `linear-gradient(${s.top}, ${s.bottom})`;
-      hemi.color.set(s.hs); hemi.groundColor.set(s.hg); hemi.intensity = s.hi;
-      sun.color.set(s.sun); sun.intensity = s.sunI;
+      hemi.color.copy(lin(s.hs)); hemi.groundColor.copy(lin(s.hg)); hemi.intensity = s.hi * 1.15;
+      sun.color.copy(lin(s.sun)); sun.intensity = s.sunI * 1.25;
+      rim.color.copy(lin(s.top)); rim.intensity = s.night ? 0.25 : 0.4;
+      cloudMat.color.copy(lin(s.night ? "#3b4252" : skyKey === "dusk" ? "#f6dcdc" : skyKey === "dawn" ? "#fff0ea" : "#ffffff")); cloudMat.opacity = s.night ? 0.55 : 0.9;
+      renderer.toneMappingExposure = s.night ? 1.25 : 1.12;
+      if (lanternGlow) lanternGlow.material.opacity = s.night ? 0.95 : skyKey === "dusk" ? 0.4 : 0;
+      for (const p of plants.values()) if (p.group.userData.glow) p.group.userData.glow.material.opacity = s.night ? 0.5 : skyKey === "dusk" ? 0.15 : 0;
       flies.visible = s.night;
       lanternMat.emissiveIntensity = s.night ? 1.4 : skyKey === "dusk" ? 0.6 : 0;
       lanternLight.intensity = s.night ? 1.6 : skyKey === "dusk" ? 0.5 : 0;
       $("time-btn").textContent = s.label;
-      if (scene.fog) scene.fog.color.set(s.bottom);
+      if (scene.fog) scene.fog.color.copy(lin(s.bottom));
     }
     $("time-btn").addEventListener("click", () => { skyManual = true; skyKey = SKY_ORDER[(SKY_ORDER.indexOf(skyKey) + 1) % 4]; applySky(); });
     setInterval(() => { if (!skyManual && skyForNow() !== skyKey) { skyKey = skyForNow(); applySky(); } }, 60000);
@@ -1468,7 +1542,7 @@ ${lines}
       for (let i = 0; i < n; i++) {
         const a = rr() * 6.283, d = Math.sqrt(rr()) * (R + 1);
         fallData.push({ x: Math.cos(a) * d, z: Math.sin(a) * d, y: rr() * 7, p: rr() * 6.28, sp: 0.6 + rr() * 0.8, rx: rr() * 6, ry: rr() * 6 });
-        fall.setColorAt(i, new T.Color(cols[i % cols.length]));
+        fall.setColorAt(i, lin(cols[i % cols.length]));
       }
       fall.instanceColor.needsUpdate = true;
       fall.userData.kind = kind;
@@ -1494,9 +1568,9 @@ ${lines}
     }
     function applySeason() {
       const se = SEASONS[seasonKey];
-      mat(GRASS, { flatShading: false }).color.set(se.grass);
-      mat(GRASS).color.set(se.tuft);
-      for (const c of canopies) { c.visible = !!se.canopy; if (se.canopy) c.material = mat(se.canopy[c.userData.canopy % se.canopy.length]); }
+      grassTopMat.color.copy(lin(se.grass));
+      bladeMat.color.copy(lin(se.tuft));
+      for (const c of canopies) { c.visible = !!se.canopy; if (se.canopy) c.material = mat(se.canopy[c.userData.canopy % se.canopy.length], { flatShading: true }); }
       for (const c of snowCaps) c.visible = !se.canopy;
       $("season-btn").textContent = se.label;
       buildFall();
@@ -1730,7 +1804,11 @@ ${lines}
     let visible = true;
     new IntersectionObserver(es => { visible = es[0].isIntersecting; }).observe(host);
     const easeOutBack = x => 1 + 2.2 * Math.pow(x - 1, 3) + 1.2 * Math.pow(x - 1, 2);
-    let lastNow = 0;
+    let lastNow = 0, perf = { frames: 0, time: 0 };
+    function lowerQuality() {
+      renderer.setPixelRatio(1); resize();
+      sun.shadow.mapSize.set(512, 512); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
+    }
     function tick(now) {
       requestAnimationFrame(tick);
       if (!visible || document.hidden) { lastNow = 0; return; }
@@ -1748,6 +1826,11 @@ ${lines}
       }
       const dt = Math.min(0.05, (now - (lastNow || now)) / 1000); lastNow = now;
       stepFall(dt, now);
+      if (!reduce.matches) {
+        for (const f of floaters) { f.position.y = f.userData.baseY + Math.sin(now / 2200 + f.userData.phase) * 0.18; f.rotation.y += dt * 0.06; }
+        if (cloudRing) cloudRing.rotation.y += dt * 0.012;
+      }
+      if (perf && dt > 0) { perf.frames++; perf.time += dt; if (perf.time > 4) { if (perf.frames / perf.time < 32) lowerQuality(); perf = null; } }
       if (mailEnvelope && mailEnvelope.visible) { mailEnvelope.position.y = 1.35 + (reduce.matches ? 0 : Math.sin(now / 600) * 0.06); mailEnvelope.rotation.y = reduce.matches ? 0 : now / 1400; }
       if (mode === "orbit") controls.update(); else if (mode === "walk") stepWalk(dt, now); else stepTransition(now);
       renderer.render(scene, camera);
