@@ -111,7 +111,7 @@ const Music = (() => {
     const t = ctx.currentTime; nextNote = t + 0.4; nextChord = t + 0.1; nextBird = t + 2; nextBug = t + 1;
     master.gain.cancelScheduledValues(t); master.gain.setTargetAtTime(volume, t, 0.8);
     clearInterval(timer); timer = setInterval(schedule, 200); schedule();
-    on = true; sync();
+    on = true; quiet = false; sync();
   }
   function stop() {
     if (!ctx) return;
@@ -133,29 +133,45 @@ const Music = (() => {
     try { localStorage.setItem("emotion-garden-volume", String(volume)); } catch (e) {}
     if (on && ctx) master.gain.setTargetAtTime(volume, ctx.currentTime, 0.1);
   });
-  // leaving the app: fade out on the audio thread first (it keeps running even if the page freezes), then suspend;
-  // cutting a live context abruptly can make phones emit a short beep
+  // leaving the app: silence first, then suspend. A phone can freeze the page a moment after it is hidden while the
+  // speaker is still open; it then repeats the last bit of sound as a "beep". So the fade is very short, it starts at
+  // the earliest sign (losing focus), and the suspend follows right away.
+  let quiet = false;
+  function fadeOut(sec) {
+    const t = ctx.currentTime;
+    master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(Math.max(0.0001, master.gain.value), t);
+    master.gain.linearRampToValueAtTime(0.0001, t + sec); master.gain.setValueAtTime(0, t + sec + 0.005);
+  }
   function hush() {
     if (!ctx || !on) return;
-    clearInterval(timer); timer = null;
-    const t = ctx.currentTime;
-    master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(Math.max(0.0001, master.gain.value), t); master.gain.linearRampToValueAtTime(0.0001, t + 0.08);
-    if (wind) { try { wind.stop(t + 0.1); } catch (e) {} wind = null; }
-    if (rainSrc) { try { rainSrc.stop(t + 0.1); } catch (e) {} rainSrc = null; }
-    setTimeout(() => { if (document.hidden && ctx) ctx.suspend().catch(() => {}); }, 150);
+    clearInterval(timer); timer = null; quiet = true;
+    fadeOut(0.025);
+    if (wind) { try { wind.stop(ctx.currentTime + 0.04); } catch (e) {} wind = null; }
+    if (rainSrc) { try { rainSrc.stop(ctx.currentTime + 0.04); } catch (e) {} rainSrc = null; }
+    setTimeout(() => { if (quiet && ctx) ctx.suspend().catch(() => {}); }, 40);
   }
   function wake() {
     if (!ctx || !on || document.hidden) return;
+    quiet = false;
     ctx.resume().then(() => {
+      if (quiet) return;
       const t = ctx.currentTime;
       nextNote = t + 0.6; nextChord = t + 0.2; nextBird = t + 3; nextBug = t + 2;
       master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(0.0001, t); master.gain.setTargetAtTime(volume, t + 0.1, 0.8);
       clearInterval(timer); timer = setInterval(schedule, 200);
     }).catch(() => {});
   }
+  // losing focus comes before the page is hidden when the app goes to the background: turn the sound down then,
+  // and bring it back if the page comes straight back (a tap on the page also counts)
+  let blurHush = null;
+  addEventListener("blur", () => { if (!ctx || !on || quiet) return; fadeOut(0.03); clearTimeout(blurHush); blurHush = setTimeout(() => { if (!document.hasFocus()) hush(); }, 400); });
+  function unblur() { clearTimeout(blurHush); if (!ctx || !on || document.hidden) return; if (quiet) wake(); else { const t = ctx.currentTime; master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(Math.max(0.0001, master.gain.value), t); master.gain.setTargetAtTime(volume, t, 0.3); } }
+  addEventListener("focus", unblur);
+  document.addEventListener("pointerdown", unblur, true);
   document.addEventListener("visibilitychange", () => { if (document.hidden) hush(); else wake(); });
   addEventListener("pagehide", hush);
   addEventListener("pageshow", wake);
+  document.addEventListener("freeze", hush);
   function sfx(name) {
     if (!on || !ctx) return;
     const t = ctx.currentTime + 0.02, key = KEYS[env().season] || KEYS.spring, r = key.root + 12;
