@@ -3,6 +3,7 @@
 
 // ---------- Storage: private db rows, else this browser ----------
 let entries = [], weeks = {}, profile = null, store = null, sample = null, sampleChecked = false;
+const LS_FALLBACK = "emotion-garden-local";
 const LS_KEY = "emotion-garden-v1", LS_WEEKS = "emotion-garden-weeks-v1", LS_PROFILE = "emotion-garden-profile-v1";
 const localStore = {
   kind: "local",
@@ -14,6 +15,8 @@ const localStore = {
   async setWeek(id, data) { weeks[id] = data; try { localStorage.setItem(LS_WEEKS, JSON.stringify(weeks)); } catch (e) {} render(); },
   async setProfile(data) { profile = data; try { localStorage.setItem(LS_PROFILE, JSON.stringify(profile)); } catch (e) {} render(); },
 };
+function localNote() { setMsg($("garden-msg"), "이 정원은 지금 쓰는 기기(브라우저)에 저장돼요. 기록이 소중하면 아래 '백업'을 가끔 해 두세요.", ""); }
+function useLocal(note) { store = localStore; store.load(); if (note) localNote(); }
 async function initStore() {
   const c = window.claude;
   if (!c || typeof c.use !== "function") { sampleChecked = true; store = localStore; store.load(); return; }
@@ -22,19 +25,25 @@ async function initStore() {
   try {
     const [db, user] = await Promise.all([c.use("db"), c.use("user")]);
     const uid = user ? await user.id() : null;
-    if (!db || !uid) { store = localStore; store.load(); return; }
+    // people who opened a shared link without permission to save here keep their garden in this browser instead
+    let canWrite = null; try { canWrite = user ? await user.can("data.write") : null; } catch (e) {}
+    let wentLocal = false; try { wentLocal = localStorage.getItem(LS_FALLBACK) === "1"; } catch (e) {}
+    if (!db || !uid || canWrite === false || (wentLocal && canWrite !== true)) { useLocal(!!uid); return; }
     const col = db.collection("data/users/" + uid);
+    let unsub = null;
+    // a refused write means this viewer cannot save here after all: move what is on screen into this browser
+    const w = p => p.catch(err => { if (err && err.code === "invalid_argument" && store && store.kind === "db") { if (unsub) unsub(); store = localStore; localStore.save(); try { localStorage.setItem(LS_FALLBACK, "1"); localStorage.setItem(LS_WEEKS, JSON.stringify(weeks)); localStorage.setItem(LS_PROFILE, JSON.stringify(profile)); } catch (e) {} localNote(); return; } throw err; });
     store = {
       kind: "db",
-      async add(e) { const { id, ...body } = e; entries.push(e); render(); await col.doc(id).set(body); },
-      async update(id, patch) { entries = entries.map(x => x.id === id ? { ...x, ...patch } : x); render(); await col.doc(id).update(patch); },
-      async remove(id) { entries = entries.filter(x => x.id !== id); render(); await col.doc(id).delete(); },
-      async setWeek(id, data) { weeks[id] = data; render(); await col.doc(id).set({ kind: "week", ...data }); },
-      async setProfile(data) { profile = data; render(); await col.doc("profile").set({ kind: "profile", ...data }); },
+      async add(e) { const { id, ...body } = e; entries.push(e); render(); await w(col.doc(id).set(body)); },
+      async update(id, patch) { entries = entries.map(x => x.id === id ? { ...x, ...patch } : x); render(); await w(col.doc(id).update(patch)); },
+      async remove(id) { entries = entries.filter(x => x.id !== id); render(); await w(col.doc(id).delete()); },
+      async setWeek(id, data) { weeks[id] = data; render(); await w(col.doc(id).set({ kind: "week", ...data })); },
+      async setProfile(data) { profile = data; render(); await w(col.doc("profile").set({ kind: "profile", ...data })); },
     };
     let settled = false;
     const timer = setTimeout(() => { if (!settled) { settled = true; render(); } }, 10000);
-    col.onSnapshot(snap => {
+    unsub = col.onSnapshot(snap => {
       settled = true; clearTimeout(timer);
       const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       entries = all.filter(x => !x.kind).map(migrate);
