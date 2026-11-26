@@ -233,6 +233,8 @@ select { font: inherit; color: var(--fg); background: var(--bg); border: 1px sol
 #sheet-confirm button { padding: 6px 14px; font-size: 0.88rem; }
 #del-yes { color: var(--danger); border-color: var(--danger); }
 #help-btn { padding-left: 0; margin-top: 2px; }
+.hero-links { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; }
+#peek-btn { margin-top: 2px; }
 .question { background: var(--accent-soft); border-radius: 12px; padding: 10px 14px; display: flex; flex-direction: column; gap: 2px; }
 .q-text { margin: 0; font-family: var(--font-display); font-size: 1rem; }
 .q-actions { display: flex; gap: 4px; flex-wrap: wrap; margin-left: -8px; }

@@ -144,6 +144,19 @@ $("export-copy").onclick = () => {
 
 // ---------- Garden photo card ----------
 let photoBlob = null;
+// where a friend who sees the photo can open the garden without signing in (GitHub Pages)
+const SITE = "https://u-el.github.io/emotion-garden/";
+let qrLoad = null;
+function loadQR() {
+  if (window.qrcode) return Promise.resolve(window.qrcode);
+  return qrLoad || (qrLoad = new Promise(res => {
+    const s = document.createElement("script"), t = setTimeout(() => { qrLoad = null; res(null); }, 5000);
+    s.src = "https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js";
+    s.onload = () => { clearTimeout(t); res(window.qrcode || null); };
+    s.onerror = () => { clearTimeout(t); qrLoad = null; res(null); };
+    document.head.append(s);
+  }));
+}
 async function makePhoto() {
   if (!g3d || !g3d.snapshot) { setMsg($("garden-msg"), "이 화면에서는 3D 정원 사진을 만들 수 없어요.", "err"); return; }
   const shot = g3d.snapshot(), envNow = g3d.env(), skyC = SKIES[envNow.sky];
@@ -170,7 +183,19 @@ async function makePhoto() {
     x.font = '600 34px "Gowun Dodum", sans-serif';
     for (const n of top) { x.fillStyle = E[n][2]; x.beginPath(); x.arc(cx + 13, 1216, 13, 0, 7); x.fill(); x.fillStyle = ink; x.fillText(E[n][0], cx + 34, 1228); cx += 34 + x.measureText(E[n][0]).width + 30; }
   }
-  x.fillStyle = soft; x.font = '400 26px "Gowun Dodum", sans-serif'; x.fillText("오늘의 마음을 적으면, 그 마음이 꽃으로 피어나는 작은 정원", 64, 1296);
+  x.fillStyle = soft; x.font = '400 26px "Gowun Dodum", sans-serif'; x.fillText("마음이 꽃으로 피어나는 작은 정원", 64, 1296);
+  x.textAlign = "right"; x.font = '600 26px "Gowun Dodum", sans-serif'; x.fillText(SITE.replace(/^https:\/\//, "").replace(/\/$/, ""), W - 64, 1296); x.textAlign = "left";
+  // a QR code in the top corner, so a friend can open the garden from a shared photo
+  try {
+    const qr = await loadQR();
+    if (qr) {
+      const q = qr(0, "M"); q.addData(SITE); q.make();
+      const n = q.getModuleCount(), cell = Math.floor(124 / n), size = cell * n, pad = 12, bx = W - 60 - size - pad * 2, by = 30;
+      x.fillStyle = "#ffffff"; x.beginPath(); x.roundRect ? x.roundRect(bx, by, size + pad * 2, size + pad * 2, 16) : x.rect(bx, by, size + pad * 2, size + pad * 2); x.fill();
+      x.fillStyle = "#23302a";
+      for (let r = 0; r < n; r++) for (let k = 0; k < n; k++) if (q.isDark(r, k)) x.fillRect(bx + pad + k * cell, by + pad + r * cell, cell, cell);
+    }
+  } catch (e) {}
   photoBlob = await new Promise(res => c.toBlob(res, "image/png"));
   $("photo-img").src = URL.createObjectURL(photoBlob);
   $("photo-save").hidden = !downloads;

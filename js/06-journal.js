@@ -182,6 +182,7 @@ $("guide-next").onclick = () => { if (guideStep < GUIDE.length - 1) { guideStep+
 $("guide-prev").onclick = () => { if (guideStep > 0) { guideStep--; renderGuide(); } };
 $("guide-skip").onclick = closeGuide;
 $("help-btn").onclick = openGuide;
+$("peek-btn").onclick = () => { const g = $("garden3d").hidden ? $("garden-title") : $("garden3d"); g.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" }); };
 setTimeout(() => {
   let seen = false; try { seen = localStorage.getItem("emotion-garden-guided") === "1"; } catch (e) {}
   if (!seen && !entries.length && !document.querySelector("dialog[open]")) openGuide();

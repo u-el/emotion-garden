@@ -5,7 +5,7 @@
 function render() {
   if (g3d) g3d.update(shown()); else { readColors(); computeLayout(); kick(); }
   const own = entries.length;
-  $("example-note").hidden = own > 0;
+  $("example-note").hidden = own > 0; $("peek-btn").hidden = own > 0;
   const bloomed = entries.filter(e => stageOf(e) === 3).length;
   $("garden-stat").textContent = own ? `꽃 ${bloomed} · 자라는 중 ${own - bloomed}` : "예시";
   const thirsty = entries.filter(needsWater).length;
