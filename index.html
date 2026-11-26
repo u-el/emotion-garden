@@ -2291,6 +2291,11 @@ ${lines}
     function schedule() {
       if (!ctx) return;
       const now = ctx.currentTime, ahead = now + 0.6, { sky, season } = env(), key = KEYS[season] || KEYS.spring, night = sky === "night";
+      // if timers were paused (app in background), never replay the missed notes all at once
+      if (nextNote < now - 0.2) nextNote = now + 0.3;
+      if (nextChord < now - 0.2) nextChord = now + 0.1;
+      if (nextBird < now - 0.2) nextBird = now + 2 + Math.random() * 4;
+      if (nextBug < now - 0.2) nextBug = now + 1;
       while (nextChord < ahead) {
         const ch = key.chords[chordIdx++ % key.chords.length];
         pad(ch.map(x => key.root - 12 + x), nextChord, 10.5, night); nextChord += 8;
@@ -2355,11 +2360,28 @@ ${lines}
       try { localStorage.setItem("emotion-garden-volume", String(volume)); } catch (e) {}
       if (on && ctx) master.gain.setTargetAtTime(volume, ctx.currentTime, 0.1);
     });
-    document.addEventListener("visibilitychange", () => {
+    // leaving the app: fade out on the audio thread first (it keeps running even if the page freezes), then suspend;
+    // cutting a live context abruptly can make phones emit a short beep
+    function hush() {
       if (!ctx || !on) return;
-      if (document.hidden) { clearInterval(timer); timer = null; ctx.suspend().catch(() => {}); }
-      else { ctx.resume().then(() => { const t = ctx.currentTime; nextNote = Math.max(nextNote, t + 0.3); nextChord = Math.max(nextChord, t); clearInterval(timer); timer = setInterval(schedule, 200); }).catch(() => {}); }
-    });
+      clearInterval(timer); timer = null;
+      const t = ctx.currentTime;
+      master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(Math.max(0.0001, master.gain.value), t); master.gain.linearRampToValueAtTime(0.0001, t + 0.08);
+      if (wind) { try { wind.stop(t + 0.1); } catch (e) {} wind = null; }
+      setTimeout(() => { if (document.hidden && ctx) ctx.suspend().catch(() => {}); }, 150);
+    }
+    function wake() {
+      if (!ctx || !on || document.hidden) return;
+      ctx.resume().then(() => {
+        const t = ctx.currentTime;
+        nextNote = t + 0.6; nextChord = t + 0.2; nextBird = t + 3; nextBug = t + 2;
+        master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(0.0001, t); master.gain.setTargetAtTime(volume, t + 0.1, 0.8);
+        clearInterval(timer); timer = setInterval(schedule, 200);
+      }).catch(() => {});
+    }
+    document.addEventListener("visibilitychange", () => { if (document.hidden) hush(); else wake(); });
+    addEventListener("pagehide", hush);
+    addEventListener("pageshow", wake);
     function sfx(name) {
       if (!on || !ctx) return;
       const t = ctx.currentTime + 0.02, key = KEYS[env().season] || KEYS.spring, r = key.root + 12;
