@@ -128,6 +128,7 @@ canvas { display: block; width: 100%; cursor: pointer; touch-action: manipulatio
 .full-chip { top: 162px; }
 .wallet { top: 12px; left: 12px; border-radius: 999px; padding: 6px 14px; font-weight: 700; font-variant-numeric: tabular-nums; box-shadow: 0 2px 8px rgba(20, 30, 25, 0.12); }
 #garden3d.walking .wallet { top: 60px; }
+#garden3d.walking .walk-tip { top: 156px; }
 #garden3d.full .wallet { left: calc(12px + env(safe-area-inset-left, 0px)); margin-top: env(safe-area-inset-top, 0px); }
 .shop-list { display: flex; flex-direction: column; gap: 8px; max-height: 52vh; overflow: auto; }
 .shop-item { display: grid; grid-template-columns: 44px 1fr auto; gap: 10px; align-items: center; background: var(--bg); border-radius: 12px; padding: 8px 10px; }
@@ -151,6 +152,8 @@ canvas { display: block; width: 100%; cursor: pointer; touch-action: manipulatio
 #garden3d.walking:not(.full) { height: min(78vh, 620px); }
 .walk-btn { left: 50%; bottom: 14px; transform: translateX(-50%); padding: 8px 16px; font-weight: 600; white-space: nowrap; }
 .exit-btn { top: 12px; left: 12px; }
+.eye-btn { top: 108px; left: 12px; border-radius: 999px; padding: 6px 12px; }
+#garden3d.full .eye-btn { left: calc(12px + env(safe-area-inset-left, 0px)); margin-top: env(safe-area-inset-top, 0px); }
 .joy { position: absolute; left: 16px; bottom: 16px; z-index: 2; width: 108px; height: 108px; border-radius: 50%;
   background: rgba(35, 48, 42, 0.16); border: 1.5px solid rgba(255, 255, 255, 0.85); box-shadow: 0 0 0 1px rgba(35, 48, 42, 0.25); touch-action: none; }
 .knob { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%;
@@ -309,6 +312,7 @@ select { font: inherit; color: var(--fg); background: var(--bg); border: 1px sol
         <button type="button" class="glass full-water" id="full-water" hidden>💧 물 주기</button>
         <button type="button" class="glass walk-btn" id="walk-btn">🚶 정원 안으로 산책하기</button>
         <button type="button" class="glass exit-btn" id="exit-walk" hidden>⬆ 섬 위로 돌아가기</button>
+        <button type="button" class="glass eye-btn" id="eye-btn" hidden></button>
         <div class="joy" id="joy" hidden aria-label="걷기 조이스틱"><div class="knob" id="knob"></div></div>
         <div class="glass near" id="near" hidden>
           <div class="near-name" id="near-name"></div>
@@ -2295,7 +2299,19 @@ ${lines}
     // ---- walk mode ----
     let mode = "orbit", trans = null, orbitSaved = null;
     const walker = { x: 0, z: 0, yaw: 0, pitch: -0.03, dist: 0 };
-    const EYE = 0.55, SPEED = 1.25, keys = new Set(), joyVec = { x: 0, y: 0 };
+    // eye height while walking: low (between the grass), normal (flower height), high (looking over the garden)
+    const EYES = [{ h: 0.55, label: "낮게", pitch: -0.03 }, { h: 1.3, label: "보통", pitch: -0.14 }, { h: 2.4, label: "높게", pitch: -0.32 }];
+    let eyeIdx = 1; try { const v = parseInt(localStorage.getItem("emotion-garden-eye"), 10); if (v >= 0 && v <= 2) eyeIdx = v; } catch (e) {}
+    let eyeH = EYES[eyeIdx].h;
+    const SPEED = 1.25, keys = new Set(), joyVec = { x: 0, y: 0 };
+    function syncEyeBtn() { $("eye-btn").textContent = `👀 ${EYES[eyeIdx].label}`; $("eye-btn").setAttribute("aria-label", `눈높이 ${EYES[eyeIdx].label}, 눌러서 바꾸기`); }
+    syncEyeBtn();
+    $("eye-btn").addEventListener("click", () => {
+      eyeIdx = (eyeIdx + 1) % EYES.length; syncEyeBtn();
+      try { localStorage.setItem("emotion-garden-eye", String(eyeIdx)); } catch (e) {}
+      walker.pitch = EYES[eyeIdx].pitch;
+      showTip(`👀 눈높이 ${EYES[eyeIdx].label}`, true);
+    });
     const eyeQuat = (yaw, pitch) => new T.Quaternion().setFromEuler(new T.Euler(pitch, yaw, 0, "YXZ"));
     function startTransition(toPos, toQuat, toFov, done) {
       trans = { t0: performance.now(), dur: reduce.matches ? 1 : 1500, fromPos: camera.position.clone(), fromQuat: camera.quaternion.clone(), fromFov: camera.fov, toPos, toQuat, toFov, done };
@@ -2314,18 +2330,18 @@ ${lines}
       orbitSaved = { pos: camera.position.clone(), quat: camera.quaternion.clone(), fov: camera.fov };
       controls.enabled = false; controls.autoRotate = false;
       const a = -0.6 + 0.32, rad = islandR * 0.88; // just beside the stepping stones
-      walker.x = Math.cos(a) * rad; walker.z = Math.sin(a) * rad; walker.yaw = Math.atan2(walker.x, walker.z); walker.pitch = -0.03;
+      walker.x = Math.cos(a) * rad; walker.z = Math.sin(a) * rad; walker.yaw = Math.atan2(walker.x, walker.z); walker.pitch = EYES[eyeIdx].pitch; eyeH = EYES[eyeIdx].h;
       host.classList.add("walking"); resize();
       $("walk-btn").hidden = true;
       scene.fog = new T.Fog(new T.Color(SKIES[skyKey].bottom), 5, islandR * 3 + 6);
-      startTransition(new T.Vector3(walker.x, EYE, walker.z), eyeQuat(walker.yaw, walker.pitch), 62, () => {
-        mode = "walk"; $("exit-walk").hidden = false; $("joy").hidden = false; syncFullWater();
+      startTransition(new T.Vector3(walker.x, eyeH, walker.z), eyeQuat(walker.yaw, walker.pitch), 62, () => {
+        mode = "walk"; $("exit-walk").hidden = false; $("joy").hidden = false; $("eye-btn").hidden = false; syncFullWater();
         showTip(matchMedia("(pointer: coarse)").matches ? "왼쪽 아래 동그라미로 걷고, 화면을 끌어서 둘러봐요" : "WASD나 방향키로 걷고, 마우스로 끌어서 둘러봐요");
       });
     }
     function exitWalk() {
       if (mode !== "walk") return;
-      $("exit-walk").hidden = true; $("joy").hidden = true; $("near").hidden = true; nearId = null; keys.clear(); joyVec.x = joyVec.y = 0;
+      $("exit-walk").hidden = true; $("joy").hidden = true; $("eye-btn").hidden = true; $("near").hidden = true; nearId = null; keys.clear(); joyVec.x = joyVec.y = 0;
       startTransition(orbitSaved.pos, orbitSaved.quat, orbitSaved.fov, () => {
         mode = "orbit"; scene.fog = null; host.classList.remove("walking"); resize();
         controls.enabled = true; controls.update(); $("walk-btn").hidden = false; syncFullWater();
@@ -2446,7 +2462,8 @@ ${lines}
         if (rr > lim) { walker.x *= lim / rr; walker.z *= lim / rr; }
       }
       const bob = reduce.matches ? 0 : Math.sin(walker.dist * 9) * 0.022;
-      camera.position.set(walker.x, EYE + bob, walker.z);
+      eyeH += (EYES[eyeIdx].h - eyeH) * Math.min(1, dt * 4); // glide smoothly to a new eye height
+      camera.position.set(walker.x, eyeH + bob * (eyeH / 0.55) * 0.6, walker.z);
       camera.quaternion.copy(eyeQuat(walker.yaw, walker.pitch));
       updateNear();
     }
