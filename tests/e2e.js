@@ -43,6 +43,7 @@ fs.writeFileSync(FIXTURE, JSON.stringify({ entries: titles.map((t, i) => ({ id: 
   await p.evaluate(() => { window.__dbg.controls.autoRotate = false; });
   const pt = await p.evaluate(() => { const d = window.__dbg; const v = d.whale.position.clone().project(d.camera); const r = d.renderer.domElement.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; });
   await p.mouse.click(pt[0], pt[1]); await p.waitForTimeout(300); ok('whale gift', (await p.textContent('#walk-tip')).includes('고래'), await p.textContent('#walk-tip'));
+  await p.waitForTimeout(1600); // let the whale's petals save first (the shop list redraws when they do)
   await p.click('#wallet-chip'); await p.waitForTimeout(200);
   const rows = await p.$$('#shop-list .shop-item'); await (await rows[0].$('button.primary')).click(); await p.waitForTimeout(300);
   const sp = await p.evaluate(() => { const d = window.__dbg, R = d.R(); const v = new d.camera.position.constructor(Math.cos(0.4) * 0.5 * R, 0, Math.sin(0.4) * 0.5 * R).project(d.camera); const r = d.renderer.domElement.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; });

@@ -53,6 +53,8 @@ function initGarden3D() {
   renderer.outputEncoding = T.sRGBEncoding;
   renderer.toneMapping = T.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.12;
   host.append(renderer.domElement);
+  let lite = false; try { lite = localStorage.getItem("emotion-garden-lite") === "1"; } catch (e) {}
+  if (lite) renderer.setPixelRatio(1);
   const K = make3DKit(T, renderer);
   const { lin, coarse, mat, mesh, BARK, LEAF, SOIL, SOIL_DARK, GRASS, STONE, grassTex, grassTopMat, soilSideMat, bladeMat, tmpObj, glow, rnd, stemTube, leafMesh, addLeaf, petalRing, bladeLeaf } = K;
 
@@ -73,7 +75,7 @@ function initGarden3D() {
   const SHADOW = coarse ? 1024 : 2048;
   sun.shadow.mapSize.set(SHADOW, SHADOW); sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.02;
   Object.assign(sun.shadow.camera, { left: -16, right: 16, top: 16, bottom: -16, near: 1, far: 50 });
-  scene.add(sun);
+  scene.add(sun); if (lite) sun.castShadow = false;
 
 
   // ---- island ----
@@ -119,7 +121,7 @@ function initGarden3D() {
         const h = 0.45 + r() * 0.75; tmpObj.scale.set(1, h, 1); tmpObj.updateMatrix(); blades.setMatrixAt(i, tmpObj.matrix);
         const v = 0.72 + r() * 0.4; blades.setColorAt(i, new T.Color(v, v * (1 + (r() - 0.5) * 0.12), v * 0.92));
       }
-      blades.instanceColor.needsUpdate = true; island.add(blades);
+      blades.instanceColor.needsUpdate = true; island.add(blades); island.userData.blades = blades; blades.visible = !lite;
     }
     // floating islets and clouds around the diorama
     floaters.length = 0;
@@ -139,7 +141,7 @@ function initGarden3D() {
       cl.position.set(Math.cos(ca) * cd, -2.2 + r() * 2.6, Math.sin(ca) * cd); cl.rotation.y = -ca; cl.scale.setScalar(0.7 + r() * 0.45);
       cloudRing.add(cl);
     }
-    island.add(cloudRing);
+    island.add(cloudRing); cloudRing.visible = !lite;
     // two seasonal trees on the rim
     for (const ta of [2.5, 4.1]) {
       const tree = new T.Group(), td = R * 0.8;
@@ -472,7 +474,7 @@ function initGarden3D() {
     whaleBody.rotation.x = still ? 0 : Math.sin(now / 900 - 0.8) * 0.05;
     whaleBody.userData.spots.children.forEach((sp, i) => { sp.material.opacity = night ? 0.5 + 0.4 * Math.sin(now / 600 + i) : 0; });
     // fish school by day
-    school.visible = !night;
+    school.visible = !night && !lite;
     if (school.visible) {
       const sa = still ? 3.6 : -now / 1000 * 0.12, sr = R * 1.32, cy = 2.2 + Math.sin(now / 3000) * 0.4;
       const cx = Math.cos(sa) * sr, cz = Math.sin(sa) * sr, dir = new T.Vector3(Math.sin(sa), 0, -Math.cos(sa));
@@ -480,7 +482,7 @@ function initGarden3D() {
     }
     // jellyfish rise at night, then start again below
     for (const j of jellies) {
-      const u = j.userData; j.visible = night;
+      const u = j.userData; j.visible = night && !lite;
       if (!night) continue;
       if (!u.d) u.d = R * (0.6 + Math.random() * 0.8);
       if (!still) { u.y += dt * u.sp; u.a += dt * 0.03; }
@@ -512,7 +514,7 @@ function initGarden3D() {
       cloudMat.color.lerp(lin(s.night ? "#30384a" : "#a9b2bd"), dim); cloudMat.opacity = Math.min(1, cloudMat.opacity + dim * 0.2);
     }
     rain.visible = wet;
-    if (fall) fall.visible = !wet;
+    if (fall) fall.visible = !wet && !lite;
     const R = islandR || 6;
     rainbow.visible = weatherKey === "rainbow" && !s.night;
     rainbow.scale.setScalar(R * 1.45); rainbow.position.set(0, -1.2, -R * 0.9);
@@ -563,7 +565,7 @@ function initGarden3D() {
   function stepCritters(dt, now) {
     const s = SKIES[skyKey], ok = !s.night && seasonKey !== "winter" && weatherKey !== "rain", still = reduce.matches;
     const flowers = [...plants.values()].filter(p => p.group.userData.glow);
-    const want = ok ? Math.min(8, flowers.length) : 0;
+    const want = ok && !lite ? Math.min(8, flowers.length) : 0;
     butterflies.forEach((b, i) => {
       const u = b.userData; b.visible = i < want;
       if (!b.visible) { u.target = null; return; }
@@ -718,7 +720,7 @@ function initGarden3D() {
     for (let i = 0; i < 26; i++) {
       const f = new T.Mesh(new T.SphereGeometry(0.035, 6, 4), flyMat);
       f.userData = { a: r() * 6.28, d: Math.sqrt(r()) * R, y: 0.5 + r() * 2.6, p: r() * 6.28 };
-      f.add(glow("#ffe27a", 0.5, 0.85)); flies.add(f);
+      f.add(glow("#ffe27a", 0.5, 0.85)); f.visible = !lite || i % 3 === 0; flies.add(f);
     }
   }
 
@@ -764,7 +766,7 @@ function initGarden3D() {
     }
     fall.instanceColor.needsUpdate = true;
     fall.userData.kind = kind;
-    scene.add(fall); stepFall(0, 0); if (weatherKey === "rain") fall.visible = false;
+    scene.add(fall); stepFall(0, 0); if (weatherKey === "rain" || lite) fall.visible = false;
   }
   function stepFall(dt, now) {
     if (!fall) return;
@@ -1068,15 +1070,33 @@ function initGarden3D() {
   // render only while the garden is on screen; checked directly each frame (an observer can miss a change)
   const onScreen = () => { if (host.classList.contains("full")) return true; const r = host.getBoundingClientRect(); return r.bottom > -80 && r.top < (window.innerHeight || 800) + 80 && r.width > 0; };
   const easeOutBack = x => 1 + 2.2 * Math.pow(x - 1, 3) + 1.2 * Math.pow(x - 1, 2);
-  let lastNow = 0, perf = { frames: 0, time: 0 }, chimeKick = 0;
+  let lastNow = 0, lastDraw = 0, perf = { frames: 0, time: 0 }, chimeKick = 0;
+  // light mode: lower resolution, no shadows, fewer moving effects, 30 frames a second
+  function setLite(v, why, byUser) {
+    lite = !!v;
+    try { localStorage.setItem("emotion-garden-lite", lite ? "1" : byUser ? "off" : "0"); } catch (e) {}
+    renderer.setPixelRatio(lite ? 1 : Math.min(window.devicePixelRatio || 1, 2)); resize();
+    sun.castShadow = !lite;
+    if (island) { if (island.userData.blades) island.userData.blades.visible = !lite; }
+    if (cloudRing) cloudRing.visible = !lite;
+    if (fall) fall.visible = !lite && weatherKey !== "rain";
+    rain.count = lite ? Math.floor(RAIN_N / 3) : RAIN_N;
+    flies.children.forEach((f, i) => { f.visible = !lite || i % 3 === 0; });
+    syncLiteBtn();
+    if (why) showTip(why);
+  }
+  function syncLiteBtn() { const b = $("lite-btn"); b.textContent = lite ? "🍃 가벼운 모드 켜짐" : "🍃 가벼운 모드"; b.setAttribute("aria-pressed", String(lite)); }
+  $("lite-btn").addEventListener("click", () => setLite(!lite, lite ? "🌳 효과를 모두 다시 켰어요" : "🍃 가벼운 모드: 효과를 줄여 배터리와 발열을 아껴요", true));
   function lowerQuality() {
-    renderer.setPixelRatio(1); resize();
-    sun.shadow.mapSize.set(512, 512); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
+    let userOff = false; try { userOff = localStorage.getItem("emotion-garden-lite") === "off"; } catch (e) {}
+    if (!lite && !userOff) setLite(true, "🍃 화면이 버벅여서 가벼운 모드로 바꿨어요. 아래 '가벼운 모드'로 끌 수 있어요");
   }
   function tick(now) {
     requestAnimationFrame(tick);
     visible = onScreen();
     if (!visible || document.hidden) { lastNow = 0; return; }
+    if (lite && now - lastDraw < 30) return;
+    lastDraw = now;
     const still = reduce.matches;
     for (const p of plants.values()) {
       const g = p.group;
@@ -1107,14 +1127,17 @@ function initGarden3D() {
       if (sparkles && sparkles.visible) sparkles.children.forEach((sp, i) => { if (sp.userData.r) { const a = sp.userData.a + now / 1800; sp.position.set(Math.cos(a) * sp.userData.r, Math.sin(now / 700 + i) * 0.25, Math.sin(a) * sp.userData.r); sp.material.opacity = 0.4 + 0.6 * Math.abs(Math.sin(now / 500 + i)); } });
       if (cloudRing) cloudRing.rotation.y += dt * 0.012;
     }
-    if (perf && dt > 0) { perf.frames++; perf.time += dt; if (perf.time > 4) { if (perf.frames / perf.time < 32) lowerQuality(); perf = null; } }
+    // watch the first seconds (after a 2 s warm-up while shaders compile) and switch to light mode if the device struggles
+    if (perf && dt > 0) { perf.warm = (perf.warm || 0) + dt; if (perf.warm > 2) { perf.frames++; perf.time += dt; if (perf.time > 4) { if (perf.frames / perf.time < 24) lowerQuality(); perf = null; } } }
     if (mailEnvelope && mailEnvelope.visible) { mailEnvelope.position.y = 1.35 + (reduce.matches ? 0 : Math.sin(now / 600) * 0.06); mailEnvelope.rotation.y = reduce.matches ? 0 : now / 1400; }
     if (mode === "orbit") controls.update(); else if (mode === "walk") stepWalk(dt, now); else stepTransition(now);
     renderer.render(scene, camera);
   }
   requestAnimationFrame(tick);
   $("garden-hint").textContent = "드래그해서 정원을 돌려 보고, 두 손가락이나 휠로 확대해요. 식물을 누르면 그날의 일기가 열려요. 오래된 식물일수록 섬 가운데에 있어요.";
-  return { update, tip: showTip, place, weather, snapshot, env: () => ({ sky: skyKey, season: seasonKey, weather: weatherKey }) };
+  syncLiteBtn(); if (lite) rain.count = Math.floor(RAIN_N / 3);
+  return { update, tip: showTip, place, setLite: v => setLite(v), lite: () => lite, weather, snapshot, env: () => ({ sky: skyKey, season: seasonKey, weather: weatherKey }) };
 }
 let g3d = null;
 try { g3d = initGarden3D(); } catch (e) { g3d = null; $("garden3d").hidden = true; cv.hidden = false; }
+if (!g3d) $("lite-btn").hidden = true; // light mode only matters for the 3D garden
