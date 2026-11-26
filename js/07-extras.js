@@ -185,3 +185,27 @@ $("photo-save").onclick = async () => {
   try { await downloads.save({ filename: `감정정원-${today()}.png`, data: photoBlob }); setMsg($("photo-msg"), "사진을 저장했어요.", "ok"); }
   catch (e) { if (!(e && e.code === "cancelled")) setMsg($("photo-msg"), "저장하지 못했어요. 이미지를 길게 눌러 저장해 보세요.", "err"); }
 };
+
+// ---------- What the gardener says when you tap them ----------
+let gardenerTurn = 0;
+function gardenerLine() {
+  const h = new Date().getHours(), lines = [];
+  const thirsty = entries.filter(needsWater), unread = entries.filter(e => e.letter && !e.letter.read).length;
+  const wtr = mindWeather(), streak = entries.length ? streakDays() : 0;
+  if (!entries.length) return "안녕하세요, 저는 이 정원의 정원지기예요. 오늘의 마음을 적어 주시면 어울리는 씨앗을 골라 드릴게요.";
+  if (isBirthday()) lines.push("오늘 생일이시죠? 생일꽃 섬의 꽃이 가장 환하게 피었어요. 축하해요! 🎂");
+  if (thirsty.length) lines.push(`${thirsty.length}그루가 물을 기다리고 있어요. ${iga(bloomName(thirsty[0]))} 특히 목말라 보여요. 💧`);
+  if (unread) lines.push(`우체통에 안 읽은 편지가 ${unread}통 있어요. ✉️`);
+  if (!entries.some(e => e.date === today())) lines.push(h < 12 ? "좋은 아침이에요. 오늘은 어떤 마음으로 시작했나요?" : "오늘의 마음은 아직 심지 않았네요. 편할 때 들려주세요.");
+  if (wtr.key === "rain") lines.push("보슬비가 내려요. 무거운 마음도 비처럼 지나가요. 꽃은 비 온 뒤에 더 잘 자라요. ☔");
+  if (wtr.key === "rainbow") lines.push("무지개 봤어요? 힘든 날들을 잘 지나왔어요. 🌈");
+  if (streak >= 2) lines.push(`벌써 ${streak}일째 함께 산책하고 있어요. 고마워요. 👣`);
+  const rare = entries.filter(e => e.rare && stageOf(e) === 3);
+  if (rare.length) lines.push(`정원에 희귀한 꽃이 ${rare.length}송이 있어요. 저도 처음 봤을 땐 깜짝 놀랐어요. ✨`);
+  lines.push(...[
+    h >= 22 || h < 5 ? "밤이 깊었어요. 오늘 하루도 애썼어요. 푹 쉬어요. 🌙" : h < 12 ? "아침 이슬이 맺혔어요. 천천히 하루를 시작해요." : h < 18 ? "햇살이 좋은 오후예요. 잠깐 쉬어 가요." : "노을이 예뻐요. 오늘 하루는 어땠나요?",
+    "어떤 마음이든 이 정원에서는 꽃이 될 수 있어요.", "천천히 가도 괜찮아요. 꽃도 하루아침에 피지 않으니까요.",
+    "떨어지는 반짝이는 꽃잎을 모으면 정원을 꾸밀 수 있어요. 🌸", "하늘고래한테 인사해 봤어요? 하루에 한 번 선물을 줘요. 🐋",
+  ]);
+  return lines[gardenerTurn++ % lines.length];
+}

@@ -1098,6 +1098,107 @@ function initGarden3D() {
     });
   }
 
+  // ---- the gardener: a little figure who strolls the island, checks on thirsty plants and talks when tapped ----
+  const gardener = new T.Group(), gBody = new T.Group(), gArmL = new T.Group(), gArmR = new T.Group(), gLegL = new T.Group(), gLegR = new T.Group();
+  const gProps = {};
+  {
+    const skin = mat("#f2c9a5"), apron = mat("#6f9a68"), shirt = mat("#f4efe2"), boot = mat("#6b4f3a"), straw = mat("#e3c77d"), band = mat("#c4553f");
+    // legs and boots
+    for (const [leg, sx] of [[gLegL, -1], [gLegR, 1]]) { leg.position.set(sx * 0.07, 0.22, 0); const l = mesh(new T.CylinderGeometry(0.045, 0.05, 0.2, 10), mat("#5b6b8a")); l.position.y = -0.09; const bt = mesh(new T.SphereGeometry(0.06, 12, 8), boot); bt.scale.set(1, 0.6, 1.4); bt.position.set(0, -0.19, 0.02); leg.add(l, bt); gBody.add(leg); }
+    // body: shirt with an apron, round and soft
+    const torso = mesh(new T.CylinderGeometry(0.13, 0.16, 0.3, 18), shirt); torso.position.y = 0.4; gBody.add(torso);
+    const apr = mesh(new T.CylinderGeometry(0.135, 0.165, 0.26, 18, 1, true, -1.2, 2.4), apron); apr.position.y = 0.39; gBody.add(apr);
+    const pocket = mesh(new T.BoxGeometry(0.08, 0.06, 0.01), mat("#5c8656")); pocket.position.set(0, 0.36, 0.158); gBody.add(pocket);
+    // arms
+    for (const [arm, sx] of [[gArmL, -1], [gArmR, 1]]) { arm.position.set(sx * 0.16, 0.52, 0); const a = mesh(new T.CylinderGeometry(0.035, 0.035, 0.2, 8), shirt); a.position.y = -0.1; const hd = mesh(new T.SphereGeometry(0.04, 10, 8), skin); hd.position.y = -0.21; arm.add(a, hd); arm.rotation.z = sx * 0.15; gBody.add(arm); }
+    // head with rosy cheeks and a straw hat
+    const head = new T.Group(); head.position.y = 0.7; gBody.add(head); gProps.head = head;
+    const face = mesh(new T.SphereGeometry(0.15, 22, 16), skin); head.add(face);
+    for (const sx of [-1, 1]) { const eye = mesh(new T.SphereGeometry(0.018, 8, 6), mat("#2a2420")); eye.position.set(sx * 0.055, 0.015, 0.138); head.add(eye); const ch = mesh(new T.SphereGeometry(0.028, 8, 6), mat("#f3a0a0")); ch.scale.z = 0.4; ch.position.set(sx * 0.085, -0.035, 0.125); head.add(ch); }
+    const smile = mesh(new T.TorusGeometry(0.03, 0.007, 6, 12, Math.PI), mat("#8a4a3a")); smile.rotation.z = Math.PI; smile.position.set(0, -0.04, 0.142); head.add(smile);
+    const brim = mesh(new T.CylinderGeometry(0.27, 0.27, 0.02, 28), straw); brim.position.y = 0.09; head.add(brim);
+    const crown = mesh(new T.CylinderGeometry(0.12, 0.15, 0.12, 22), straw); crown.position.y = 0.15; head.add(crown);
+    const hb = mesh(new T.CylinderGeometry(0.152, 0.152, 0.03, 22), band); hb.position.y = 0.11; head.add(hb);
+    // watering can in the right hand
+    const can = new T.Group(); can.position.set(0.05, -0.24, 0.06); gArmR.add(can); gProps.can = can;
+    const tank = mesh(new T.CylinderGeometry(0.06, 0.065, 0.1, 14), mat("#7fb0c8", { metalness: 0.4, roughness: 0.4 })); can.add(tank);
+    const spout = mesh(new T.CylinderGeometry(0.008, 0.014, 0.14, 6), mat("#7fb0c8", { metalness: 0.4, roughness: 0.4 })); spout.rotation.x = Math.PI / 2 - 0.6; spout.position.set(0, 0.02, 0.09); can.add(spout);
+    const handle = mesh(new T.TorusGeometry(0.04, 0.008, 6, 14, Math.PI), mat("#7fb0c8")); handle.position.y = 0.05; handle.rotation.y = Math.PI / 2; can.add(handle);
+    // extras that come and go with the weather and the hour
+    const lantern = new T.Group(); lantern.position.set(0, -0.26, 0.04); gArmL.add(lantern);
+    const lp = mesh(new T.SphereGeometry(0.045, 12, 10), new T.MeshStandardMaterial({ color: lin("#ffe2a8"), emissive: lin("#ffb35a"), emissiveIntensity: 1.4 })); lantern.add(lp, glow("#ffc46b", 0.9, 0.85)); gProps.lantern = lantern;
+    const umbrella = new T.Group(); umbrella.position.set(0, 0.05, 0); gArmL.add(umbrella);
+    const stick = mesh(new T.CylinderGeometry(0.008, 0.008, 0.62, 6), mat("#5a4a3a")); stick.position.y = 0.3; umbrella.add(stick);
+    const canopy = mesh(new T.ConeGeometry(0.34, 0.14, 12, 1, true), mat("#e46a6a", { side: T.DoubleSide })); canopy.position.y = 0.62; umbrella.add(canopy); gProps.umbrella = umbrella;
+    const scarf = mesh(new T.TorusGeometry(0.12, 0.035, 8, 18), mat("#d24b4b")); scarf.rotation.x = Math.PI / 2; scarf.position.y = 0.56; gBody.add(scarf); gProps.scarf = scarf;
+    const thought = glow("#7db8ff", 0.5, 0); thought.position.y = 1.15; gBody.add(thought); gProps.thought = thought;
+    const drop = new T.Mesh(new T.SphereGeometry(0.05, 10, 8), new T.MeshStandardMaterial({ color: lin(0x5aa0e6), emissive: lin(0x1d5fa8), emissiveIntensity: 0.5, roughness: 0.15, transparent: true, opacity: 0.92 })); drop.position.y = 1.15; drop.scale.y = 1.3; gBody.add(drop); gProps.drop = drop;
+    const hit = new T.Mesh(new T.CylinderGeometry(0.28, 0.28, 1.0, 10), new T.MeshBasicMaterial({ visible: false })); hit.position.y = 0.5; gBody.add(hit);
+    gardener.add(gBody); gardener.scale.setScalar(1.25);
+    gardener.traverse(o => { o.userData.gardener = true; if (o.isMesh) o.castShadow = true; });
+    world.add(gardener);
+  }
+  const gState = { target: null, mode: "walk", until: 0, x: 1, z: 1, yaw: 0, bubbleUntil: 0, plantId: null };
+  function gardenerPickTarget(now) {
+    const R = islandR || 6;
+    const thirsty = [...plants.entries()].filter(([id]) => { const e = entries.find(x => x.id === id); return e && needsWater(e); });
+    const blooms = [...plants.values()].filter(p => p.group.userData.glow);
+    let spot, kind = "stroll", plantId = null;
+    if (thirsty.length && Math.random() < 0.75) { const [id, p] = thirsty[Math.floor(Math.random() * thirsty.length)]; spot = p.group.position; kind = "thirsty"; plantId = id; }
+    else if (blooms.length && Math.random() < 0.6) { spot = blooms[Math.floor(Math.random() * blooms.length)].group.position; kind = "admire"; }
+    if (spot) { const a = Math.random() * 6.283; gState.target = { x: spot.x + Math.cos(a) * 0.55, z: spot.z + Math.sin(a) * 0.55, fx: spot.x, fz: spot.z }; }
+    else { const a = Math.random() * 6.283, d = Math.sqrt(Math.random()) * R * 0.8; gState.target = { x: Math.cos(a) * d, z: Math.sin(a) * d }; }
+    const rr = Math.hypot(gState.target.x, gState.target.z), lim = R * 0.88; if (rr > lim) { gState.target.x *= lim / rr; gState.target.z *= lim / rr; }
+    gState.kind = kind; gState.plantId = plantId; gState.mode = "walk";
+  }
+  function stepGardener(dt, now) {
+    const s = SKIES[skyKey], still = reduce.matches, night = s.night, wet = weatherKey === "rain";
+    gProps.lantern.visible = night && !wet; gProps.umbrella.visible = wet; gProps.scarf.visible = seasonKey === "winter";
+    gProps.can.visible = !wet;
+    if (!gState.target) gardenerPickTarget(now);
+    const speed = (night ? 0.32 : 0.45) * (still ? 0 : 1);
+    let walking = false;
+    if (gState.mode === "walk") {
+      const dx = gState.target.x - gState.x, dz = gState.target.z - gState.z, d = Math.hypot(dx, dz);
+      if (d < 0.05 || still) { gState.mode = "stay"; gState.until = now + (gState.kind === "thirsty" ? 5000 : gState.kind === "admire" ? 3500 : 2000) + Math.random() * 2000; }
+      else { const step = Math.min(d, speed * dt); gState.x += dx / d * step; gState.z += dz / d * step; gState.yaw = Math.atan2(dx, dz); walking = true; }
+    } else {
+      if (gState.target.fx !== undefined) gState.yaw = Math.atan2(gState.target.fx - gState.x, gState.target.fz - gState.z);
+      if (now > gState.until) { gState.target = null; }
+    }
+    gardener.position.set(gState.x, 0, gState.z);
+    let dy = gState.yaw - gardener.rotation.y; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); gardener.rotation.y += dy * Math.min(1, dt * 6);
+    const sw = walking ? Math.sin(now / 160) : 0;
+    gLegL.rotation.x = sw * 0.5; gLegR.rotation.x = -sw * 0.5;
+    gArmL.rotation.x = -sw * 0.4; gArmR.rotation.x = sw * 0.4;
+    gBody.position.y = walking ? Math.abs(sw) * 0.025 : 0;
+    const staying = gState.mode === "stay";
+    // checking a thirsty plant: lean in and show a water drop; admiring: lean and nod
+    const lean = staying && gState.kind !== "stroll" ? 0.28 : 0;
+    gBody.rotation.x += (lean - gBody.rotation.x) * Math.min(1, dt * 4);
+    gProps.head.rotation.x = staying && gState.kind === "admire" && !still ? Math.sin(now / 500) * 0.12 : 0;
+    const showDrop = staying && gState.kind === "thirsty";
+    gProps.drop.visible = showDrop; gProps.thought.material.opacity = showDrop ? 0.5 : 0;
+    if (showDrop) gProps.drop.position.y = 1.15 + (still ? 0 : Math.sin(now / 300) * 0.04);
+    // keep the speech bubble over their head
+    const bub = $("g-bubble");
+    if (!bub.hidden) {
+      if (now > gState.bubbleUntil || mode !== "orbit" && mode !== "walk") { bub.style.opacity = 0; if (now > gState.bubbleUntil + 400) bub.hidden = true; }
+      const v = gardener.position.clone(); v.y += 1.25 * gardener.scale.y; v.project(camera);
+      const r = renderer.domElement.getBoundingClientRect(), hr = host.getBoundingClientRect();
+      bub.style.left = `${clamp((v.x + 1) / 2 * r.width + (r.left - hr.left), 130, hr.width - 130)}px`; bub.style.top = `${Math.max(60, (1 - v.y) / 2 * r.height + (r.top - hr.top))}px`;
+      bub.style.visibility = v.z < 1 ? "visible" : "hidden";
+    }
+  }
+  function gardenerTalk() {
+    const bub = $("g-bubble"); bub.textContent = "";
+    const b = document.createElement("b"); b.textContent = "정원지기 "; bub.append(b, document.createTextNode(gardenerLine()));
+    bub.hidden = false; bub.style.opacity = 1; gState.bubbleUntil = performance.now() + 6000;
+    gState.mode = "stay"; gState.until = performance.now() + 4000;
+    const dx = camera.position.x - gState.x, dz = camera.position.z - gState.z; gState.yaw = Math.atan2(dx, dz); gState.target = gState.target || { x: gState.x, z: gState.z }; delete gState.target.fx;
+    Music.sfx("collect");
+  }
+
   // ---- water drops & fireflies ----
   const dropMat = new T.MeshStandardMaterial({ color: lin(0x5aa0e6), emissive: lin(0x1d5fa8), emissiveIntensity: 0.5, roughness: 0.15, metalness: 0.1, transparent: true, opacity: 0.92 });
   function makeDrop() {
@@ -1252,7 +1353,7 @@ function initGarden3D() {
     const rect = renderer.domElement.getBoundingClientRect();
     ndc.set(((ev.clientX - rect.left) / rect.width) * 2 - 1, -((ev.clientY - rect.top) / rect.height) * 2 + 1);
     ray.setFromCamera(ndc, camera);
-    const targets = mode === "orbit" ? [...pathStones] : []; if (mailbox) targets.push(mailbox); if (birthIslet) targets.push(birthIslet); targets.push(whale); if (decorGroup) targets.push(decorGroup); collects.forEach(c => { if (!c.userData.dying) targets.unshift(c); }); if (mode === "walk") huntItems.forEach(c => { if (!c.userData.done) targets.unshift(c); }); for (const p of plants.values()) { targets.push(p.group); if (p.drop) targets.push(p.drop); }
+    const targets = mode === "orbit" ? [...pathStones] : []; if (mailbox) targets.push(mailbox); if (birthIslet) targets.push(birthIslet); targets.push(whale); if (decorGroup) targets.push(decorGroup); targets.push(gardener); collects.forEach(c => { if (!c.userData.dying) targets.unshift(c); }); if (mode === "walk") huntItems.forEach(c => { if (!c.userData.done) targets.unshift(c); }); for (const p of plants.values()) { targets.push(p.group); if (p.drop) targets.push(p.drop); }
     const hit = ray.intersectObjects(targets, true)[0];
     if (hit && hit.object.userData.path) { enterWalk(); return; }
     if (hit && hit.object.userData.huntItem) {
@@ -1269,6 +1370,7 @@ function initGarden3D() {
       return;
     }
     if (mode === "orbit" && selectedUid) hideDecorBar();
+    if (hit && hit.object.userData.gardener) { gardenerTalk(); return; }
     if (hit && hit.object.userData.whale) { whaleHello(); return; }
     if (hit && hit.object.userData.birthday) { openBirthdayCard(); return; }
     if (hit && hit.object.userData.mailbox) { if (!openMailbox()) showTip("아직 편지가 없어요. 꽃을 피우면 정원지기가 편지를 보내요"); return; }
@@ -1491,6 +1593,7 @@ function initGarden3D() {
     stepSky(dt, now);
     stepWeather(dt, now);
     stepCritters(dt, now);
+    stepGardener(dt, now);
     if (!reduce.matches) for (const pw of pinwheels) pw.rotation.z -= dt * 2.4;
     if (chimeStrips.length) { const kick = chimeKick ? Math.max(0, 1 - (now - chimeKick) / 2500) : 0; chimeStrips.forEach((cs, i) => { cs.rotation.z = (reduce.matches ? 0 : Math.sin(now / 700 + i) * 0.12) + Math.sin(now / 120) * 0.35 * kick; }); }
     if (!reduce.matches) {

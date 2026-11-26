@@ -262,6 +262,11 @@ mark { background: color-mix(in srgb, var(--accent) 22%, transparent); color: in
 .cal .day .more { position: absolute; top: 3px; right: 5px; font-size: 0.62rem; }
 .cal .day .emo-ic { font-size: 0.95rem; line-height: 1; }
 .hunt-chip { top: 156px; left: 12px; border-radius: 999px; padding: 6px 12px; font-size: 0.8rem; pointer-events: none; }
+.gardener-bubble { position: absolute; z-index: 3; left: 0; top: 0; max-width: min(240px, calc(100% - 32px)); padding: 9px 13px; border-radius: 14px;
+  background: #fffdf6; color: #3a3328; font-size: 0.86rem; line-height: 1.5; box-shadow: 0 4px 14px rgba(20, 30, 25, 0.18);
+  transform: translate(-50%, calc(-100% - 12px)); pointer-events: none; transition: opacity 0.4s; }
+.gardener-bubble::after { content: ""; position: absolute; left: 50%; bottom: -7px; width: 14px; height: 14px; background: #fffdf6; transform: translateX(-50%) rotate(45deg); border-radius: 2px; }
+.gardener-bubble b { font-family: var(--font-display); }
 #garden3d.walking .walk-tip { top: 204px; }
 #garden3d.full .hunt-chip { left: calc(12px + env(safe-area-inset-left, 0px)); margin-top: env(safe-area-inset-top, 0px); }
 .guide-sheet { align-items: center; text-align: center; padding: 28px 22px 20px; }
