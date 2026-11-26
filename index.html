@@ -128,7 +128,6 @@ canvas { display: block; width: 100%; cursor: pointer; touch-action: manipulatio
 .full-chip { top: 162px; }
 .wallet { top: 12px; left: 12px; border-radius: 999px; padding: 6px 14px; font-weight: 700; font-variant-numeric: tabular-nums; box-shadow: 0 2px 8px rgba(20, 30, 25, 0.12); }
 #garden3d.walking .wallet { top: 60px; }
-#garden3d.walking .walk-tip { top: 156px; }
 #garden3d.full .wallet { left: calc(12px + env(safe-area-inset-left, 0px)); margin-top: env(safe-area-inset-top, 0px); }
 .shop-list { display: flex; flex-direction: column; gap: 8px; max-height: 52vh; overflow: auto; }
 .shop-item { display: grid; grid-template-columns: 44px 1fr auto; gap: 10px; align-items: center; background: var(--bg); border-radius: 12px; padding: 8px 10px; }
@@ -206,6 +205,45 @@ dialog::backdrop { background: rgba(10, 16, 14, 0.45); }
 .bday-flower { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; font-size: 1.8rem; background: var(--bg); flex: none; }
 select { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; }
 .week-nav { display: flex; align-items: center; gap: 8px; }
+#help-btn { padding-left: 0; margin-top: 2px; }
+.question { background: var(--accent-soft); border-radius: 12px; padding: 10px 14px; display: flex; flex-direction: column; gap: 2px; }
+.q-text { margin: 0; font-family: var(--font-display); font-size: 1rem; }
+.q-actions { display: flex; gap: 4px; flex-wrap: wrap; margin-left: -8px; }
+.sheet-q { margin: 0; font-size: 0.88rem; color: var(--accent); }
+.safety { border: 1px solid var(--stamp); background: var(--paper); color: var(--ink); border-radius: 12px; padding: 12px 14px; font-size: 0.9rem; display: flex; flex-direction: column; gap: 6px; }
+.safety b { font-family: var(--font-display); }
+.safety ul { margin: 0; padding-left: 1.1em; }
+.safety .num { font-weight: 700; font-variant-numeric: tabular-nums; user-select: all; }
+input[type="search"] { width: 100%; box-sizing: border-box; font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; }
+.diary-list { display: flex; flex-direction: column; gap: 8px; }
+.diary-item { display: flex; flex-direction: column; gap: 3px; text-align: left; border-radius: 12px; padding: 10px 14px; background: var(--bg); border: 1px solid transparent; }
+.diary-item:hover { border-color: var(--line); }
+.diary-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.diary-title { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.diary-date { font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; flex: none; }
+.diary-emos { display: flex; gap: 8px; flex-wrap: wrap; font-size: 0.8rem; color: var(--muted); }
+.diary-emos span { display: inline-flex; align-items: center; gap: 4px; }
+.diary-emos i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.diary-peek { font-size: 0.85rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+mark { background: color-mix(in srgb, var(--accent) 22%, transparent); color: inherit; border-radius: 3px; }
+.cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal .dow { text-align: center; font-size: 0.75rem; color: var(--muted); padding-bottom: 2px; }
+.cal .day { aspect-ratio: 1; max-width: 100%; border-radius: 10px; border: 1px solid transparent; background: var(--bg); padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 0.78rem; color: var(--muted); font-variant-numeric: tabular-nums; position: relative; }
+.cal .day.has { color: #1f2a24; font-weight: 600; cursor: pointer; }
+.cal .day.today { border-color: var(--accent); border-width: 2px; }
+.cal .day.out { visibility: hidden; }
+.cal .day .more { position: absolute; top: 3px; right: 5px; font-size: 0.62rem; }
+.cal .day .emo-ic { font-size: 0.95rem; line-height: 1; }
+.hunt-chip { top: 156px; left: 12px; border-radius: 999px; padding: 6px 12px; font-size: 0.8rem; pointer-events: none; }
+#garden3d.walking .walk-tip { top: 204px; }
+#garden3d.full .hunt-chip { left: calc(12px + env(safe-area-inset-left, 0px)); margin-top: env(safe-area-inset-top, 0px); }
+.guide-sheet { align-items: center; text-align: center; padding: 28px 22px 20px; }
+.guide-art { font-size: 3.2rem; line-height: 1; }
+.guide-body { margin: 0; color: var(--muted); white-space: pre-line; }
+.guide-dots { display: flex; gap: 6px; }
+.guide-dots span { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
+.guide-dots span.on { background: var(--accent); }
+.guide-sheet .row { justify-content: center; }
 .week-nav button { padding: 4px 12px; }
 .week-range { font-variant-numeric: tabular-nums; font-size: 0.92rem; min-width: 9.5em; text-align: center; }
 .map-box { min-width: 0; }
@@ -249,6 +287,7 @@ select { font: inherit; color: var(--fg); background: var(--bg); border: 1px sol
     <p class="eyebrow">하루 10분 감정산책</p>
     <h1>감정정원</h1>
     <p class="lede">오늘 있었던 일과 마음을 적으면, 정원지기가 감정을 읽고 어울리는 씨앗을 골라줘요. 하루에 한 번 물을 주면 씨앗이 사흘에 걸쳐 꽃으로 자라요.</p>
+    <button type="button" class="link-btn" id="help-btn">처음이라면? 안내 보기</button>
   </header>
 
   <section class="panel bday-banner" id="bday-banner" hidden aria-live="polite">
@@ -265,6 +304,11 @@ select { font: inherit; color: var(--fg); background: var(--bg); border: 1px sol
       <h2 id="write-title">오늘의 산책</h2>
       <span class="date" id="today-label"></span>
     </div>
+    <div class="question" id="q-card">
+      <span class="label">🌿 정원지기의 오늘의 질문</span>
+      <p class="q-text" id="q-text"></p>
+      <div class="q-actions"><button type="button" class="link-btn" id="q-use">이 질문에 답하기</button><button type="button" class="link-btn" id="q-next">다른 질문</button></div>
+    </div>
     <textarea id="walk-input" placeholder="오늘 어떤 일이 있었나요? 떠오르는 대로 편하게 적어 보세요."></textarea>
     <div class="row">
       <button class="primary" id="read-btn" type="button">감정 읽기</button>
@@ -276,6 +320,7 @@ select { font: inherit; color: var(--fg); background: var(--bg); border: 1px sol
   <section class="panel reading" id="reading" hidden aria-labelledby="seed-title">
     <p class="eyebrow">정원지기가 읽은 마음</p>
     <p class="note" id="r-note" hidden></p>
+    <div class="safety" id="r-safety" hidden></div>
     <div>
       <div class="label">오늘의 씨앗</div>
       <div class="seed-name" id="seed-title"></div>
@@ -318,6 +363,7 @@ select { font: inherit; color: var(--fg); background: var(--bg); border: 1px sol
         <button type="button" class="glass walk-btn" id="walk-btn">🚶 정원 안으로 산책하기</button>
         <button type="button" class="glass exit-btn" id="exit-walk" hidden>⬆ 섬 위로 돌아가기</button>
         <button type="button" class="glass eye-btn" id="eye-btn" hidden></button>
+        <div class="glass hunt-chip" id="hunt-chip" hidden></div>
         <div class="joy" id="joy" hidden aria-label="걷기 조이스틱"><div class="knob" id="knob"></div></div>
         <div class="glass near" id="near" hidden>
           <div class="near-name" id="near-name"></div>
@@ -333,6 +379,29 @@ select { font: inherit; color: var(--fg); background: var(--bg); border: 1px sol
     </div>
     <div class="stages"><span>씨앗 → 새싹 → 꽃봉오리 → 꽃</span><span>💧 표시는 오늘 물이 필요한 식물이에요</span></div>
     <p class="hint" id="garden-hint">식물을 누르면 그날의 일기를 다시 읽을 수 있어요. 세기가 강한 감정일수록 크게 자라요.</p>
+  </section>
+
+  <section class="panel" aria-labelledby="diary-title">
+    <div class="panel-head">
+      <h2 id="diary-title">나의 일기장</h2>
+      <span class="stat" id="diary-stat"></span>
+    </div>
+    <input type="search" id="diary-search" placeholder="제목, 내용, 감정으로 찾기 (예: 엄마, 서운함)" aria-label="일기 찾기">
+    <div class="diary-list" id="diary-list"></div>
+    <button type="button" class="ghost" id="diary-more" hidden>더 보기</button>
+  </section>
+
+  <section class="panel" aria-labelledby="cal-title">
+    <div class="panel-head">
+      <h2 id="cal-title">감정 달력</h2>
+      <div class="week-nav">
+        <button type="button" class="ghost" id="cal-prev" aria-label="지난달">←</button>
+        <span class="week-range" id="cal-range"></span>
+        <button type="button" class="ghost" id="cal-next" aria-label="다음 달">→</button>
+      </div>
+    </div>
+    <div class="cal" id="cal" role="grid" aria-label="날짜별 감정 달력"></div>
+    <p class="hint" id="cal-summary"></p>
   </section>
 
   <section class="panel" aria-labelledby="bday-title">
@@ -417,22 +486,57 @@ select { font: inherit; color: var(--fg); background: var(--bg); border: 1px sol
 <dialog id="sheet">
   <div class="sheet">
     <div class="date" id="sheet-date"></div>
-    <h3 id="sheet-title"></h3>
-    <div class="stage-line" id="sheet-stage"></div>
-    <p class="note" id="sheet-note" hidden></p>
-    <div class="chips" id="sheet-emos"></div>
-    <p class="diary" id="sheet-diary"></p>
-    <details id="sheet-orig-box" hidden><summary>내가 쓴 글</summary><p id="sheet-orig"></p></details>
-    <div class="row" id="sheet-letter-row" hidden><button type="button" id="sheet-letter">✉️ 정원지기의 편지 읽기</button></div>
-    <div class="row" id="sheet-actions">
-      <button type="button" class="water" id="sheet-water">물 주기</button>
-      <button type="button" class="primary" id="sheet-close">닫기</button>
-      <button type="button" class="ghost" id="sheet-del">이 식물 뽑기</button>
+    <div id="sheet-view" class="sheet-part">
+      <h3 id="sheet-title"></h3>
+      <div class="stage-line" id="sheet-stage"></div>
+      <p class="note" id="sheet-note" hidden></p>
+      <div class="chips" id="sheet-emos"></div>
+      <p class="sheet-q" id="sheet-q" hidden></p>
+      <p class="diary" id="sheet-diary"></p>
+      <div class="safety" id="sheet-safety" hidden></div>
+      <details id="sheet-orig-box" hidden><summary>내가 쓴 글</summary><p id="sheet-orig"></p></details>
+      <div class="row" id="sheet-letter-row" hidden><button type="button" id="sheet-letter">✉️ 정원지기의 편지 읽기</button></div>
+      <div class="row" id="sheet-actions">
+        <button type="button" class="water" id="sheet-water">물 주기</button>
+        <button type="button" class="primary" id="sheet-close">닫기</button>
+        <button type="button" class="ghost" id="sheet-edit">고치기</button>
+        <button type="button" class="ghost" id="sheet-del">이 식물 뽑기</button>
+      </div>
+    </div>
+    <div id="sheet-editor" class="sheet-part" hidden>
+      <h3>일기 고치기</h3>
+      <label class="label" for="ed-title">제목</label>
+      <input type="text" id="ed-title" maxlength="40">
+      <label class="label" for="ed-diary">일기</label>
+      <textarea id="ed-diary"></textarea>
+      <div class="label">감정 (첫 번째 감정이 식물 종류를 정해요)</div>
+      <div class="emo-rows" id="ed-emos"></div>
+      <div class="row"><button type="button" class="ghost" id="ed-add">+ 감정 더하기</button></div>
+      <div class="picker" id="ed-picker" hidden></div>
+      <div class="row">
+        <button type="button" class="primary" id="ed-save">고친 내용 저장</button>
+        <button type="button" class="ghost" id="ed-cancel">그만두기</button>
+        <span class="msg" id="ed-msg" role="status"></span>
+      </div>
     </div>
     <div class="row" id="sheet-confirm" hidden>
       <span class="confirm">정말 뽑을까요? 일기도 함께 지워져요.</span>
       <button type="button" id="del-yes">뽑기</button>
       <button type="button" class="ghost" id="del-no">그만두기</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="guide-dlg" aria-labelledby="guide-step-title">
+  <div class="sheet guide-sheet">
+    <div class="guide-art" id="guide-art" aria-hidden="true"></div>
+    <h3 id="guide-step-title"></h3>
+    <p class="guide-body" id="guide-step-body"></p>
+    <div class="guide-dots" id="guide-dots" aria-hidden="true"></div>
+    <div class="row">
+      <button type="button" class="primary" id="guide-next"></button>
+      <button type="button" class="ghost" id="guide-prev">이전</button>
+      <button type="button" class="link-btn" id="guide-skip">건너뛰기</button>
     </div>
   </div>
 </dialog>
@@ -622,7 +726,9 @@ select { font: inherit; color: var(--fg); background: var(--bg); border: 1px sol
 JSON 하나로만 답해:
 {"감정":[{"번호":9,"세기":4}],"제목":"...","일기":"...","한마디":"..."}
 
-사용자의 글:
+${qUsed ? `사용자는 정원지기의 질문 "${qUsed}"에 답하며 썼어.
+
+` : ""}사용자의 글:
 """
 ${text}
 """`;
@@ -679,6 +785,8 @@ ${text}
 
   function showReading() {
     $("reading").hidden = false;
+    if (qUsed && draft && !draft.question) draft.question = qUsed;
+    fillSafety($("r-safety"), draft.original + " " + draft.diary);
     $("r-note").hidden = !draft.note; $("r-note").textContent = draft.note;
     $("r-title").value = draft.title; $("r-diary").value = draft.diary;
     setMsg($("plant-msg"), "");
@@ -740,11 +848,11 @@ ${text}
       id: newId(), v: 2, date: today(), createdAt: Date.now(), waterDays: [today()], ...(first ? { fast: true } : {}),
       emotions: draft.emotions.map(x => ({ n: x.n, s: x.s })),
       title: ($("r-title").value.trim() || E[draft.emotions[0].n][0] + "의 하루").slice(0, 40),
-      diary: $("r-diary").value.trim(), note: draft.note, original: draft.original,
+      diary: $("r-diary").value.trim(), note: draft.note, original: draft.original, ...(draft.question ? { question: draft.question } : {}),
     };
     try { await (store || localStore).add(entry); Music.sfx("plant"); if (plantedToday < 2) earn(5, "씨앗을 심었어요"); }
     catch (e) { setMsg(msg, "심지 못했어요. 새로고침한 뒤 다시 시도해 주세요.", "err"); return; }
-    draft = null; $("reading").hidden = true; $("walk-input").value = "";
+    draft = null; $("reading").hidden = true; $("walk-input").value = ""; qUsed = null; $("walk-input").placeholder = "오늘 어떤 일이 있었나요? 떠오르는 대로 편하게 적어 보세요.";
     try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
     setMsg($("write-msg"), "");
     setMsg($("garden-msg"), first ? `${seedName(entry.emotions[0].n)}을 심었어요. 첫 씨앗이라 3분 뒤에 새싹이 돋아요 🌱` : `${seedName(entry.emotions[0].n)}을 심었어요. 내일부터 물을 주면 자라요.`, "ok");
@@ -965,6 +1073,8 @@ ${entries.length ? `지금까지 ${entries.length}그루의 마음을 이 정원
     { id: "birdhouse", name: "새집", icon: "🐦", price: 18, desc: "작은 새가 놀러 오는 집" },
     { id: "pond", name: "작은 연못", icon: "💧", price: 25, desc: "연잎이 떠 있는 동그란 연못" },
     { id: "arch", name: "꽃 아치", icon: "🌸", price: 30, desc: "산책길 입구를 꾸미는 꽃 아치" },
+    { id: "pinwheel", name: "무지개 바람개비", icon: "🎡", reward: 7, desc: "7일 연속 산책 선물 · 바람에 빙글빙글" },
+    { id: "startree", name: "별빛 나무", icon: "🌟", reward: 30, desc: "30일 연속 산책 선물 · 밤이면 별 열매가 빛나요" },
   ];
   const COLLECT_CAP = 20;
   let petalBuffer = 0, collectBuffer = 0, petalTimer = null;
@@ -1010,7 +1120,8 @@ ${entries.length ? `지금까지 ${entries.length}그루의 마음을 이 정원
       tx.append(nm, ds);
       const b = document.createElement("button"); b.type = "button";
       const mine = owned[d.id];
-      if (!mine) { b.className = "primary"; b.textContent = `🌸 ${d.price}`; b.disabled = n < d.price; b.setAttribute("aria-label", `${d.name} 꽃잎 ${d.price}장으로 사기`); b.onclick = () => buyDecor(d); }
+      if (!mine && d.reward) { b.className = "ghost"; b.textContent = `👣 ${d.reward}일`; b.disabled = true; b.setAttribute("aria-label", `${d.name}: ${d.reward}일 연속 산책하면 받아요`); }
+      else if (!mine) { b.className = "primary"; b.textContent = `🌸 ${d.price}`; b.disabled = n < d.price; b.setAttribute("aria-label", `${d.name} 꽃잎 ${d.price}장으로 사기`); b.onclick = () => buyDecor(d); }
       else { b.className = mine.shown ? "ghost" : ""; b.textContent = mine.shown ? "치우기" : "놓기"; b.onclick = () => toggleDecor(d); }
       row.append(ic, tx, b); box.append(row);
     }
@@ -1047,6 +1158,185 @@ ${entries.length ? `지금까지 ${entries.length}그루의 마음을 이 정원
     if (g3d) g3d.tip("🌱 첫 새싹이 돋았어요!", true);
   }, 10000);
   setTimeout(() => entries.filter(e => e.fast && Date.now() - (e.createdAt || 0) >= FAST_MS).forEach(e => sproutSeen.add(e.id)), 12000);
+
+  // ---------- Safety: gentle help when a diary mentions self-harm (works without AI) ----------
+  const RISK = /(죽고\s*싶|자살|자해|사라지고\s*싶|없어지고\s*싶|살기\s*싫|살고\s*싶지\s*않|목숨을\s*끊|끝내고\s*싶|극단적\s*선택|죽어\s*버리|뛰어내리|손목을)/;
+  function fillSafety(el, text) {
+    const show = RISK.test(String(text || ""));
+    el.hidden = !show; el.textContent = "";
+    if (!show) return;
+    const b = document.createElement("b"); b.textContent = "혼자 견디지 않아도 괜찮아요";
+    const p = document.createElement("span"); p.textContent = "지금 마음이 많이 힘들다면, 이야기를 들어 줄 사람과 연결될 수 있어요. 24시간 전화할 수 있어요.";
+    const ul = document.createElement("ul");
+    for (const [num, label] of [["109", "자살예방상담전화"], ["1577-0199", "정신건강위기상담전화"], ["1388", "청소년상담전화 (문자 #1388)"], ["119 · 112", "지금 위험하다면"]]) {
+      const li = document.createElement("li"); const n = document.createElement("span"); n.className = "num"; n.textContent = num;
+      li.append(n, document.createTextNode(" " + label)); ul.append(li);
+    }
+    el.append(b, p, ul);
+  }
+  $("walk-input").addEventListener("input", () => { if ($("reading").hidden) return; fillSafety($("r-safety"), $("walk-input").value); });
+
+  // ---------- Today's question from the gardener ----------
+  const QUESTIONS = [
+    "오늘 고마웠던 작은 일 하나는 무엇이었나요?", "오늘 가장 오래 머문 감정은 무엇이었나요?", "오늘 나를 웃게 한 순간이 있었나요?",
+    "요즘 자주 떠오르는 사람이 있나요?", "오늘 몸은 어땠나요? 피곤했나요, 가벼웠나요?", "오늘 하고 싶었지만 못 한 말이 있나요?",
+    "오늘 나에게 해 주고 싶은 말은?", "오늘 하루를 날씨로 표현하면 어떤 날씨였나요?", "요즘 나를 가장 지치게 하는 것은 무엇인가요?",
+    "오늘 먹은 것 중에 기억에 남는 게 있나요?", "오늘 누군가에게 받은 다정함이 있었나요?", "오늘 스스로 잘했다고 느낀 순간은?",
+    "요즘 기다리고 있는 일이 있나요?", "오늘 마음이 쿵 내려앉은 순간이 있었나요?", "오늘 들은 말 중에 마음에 남은 말은?",
+    "지금 이 순간 가장 원하는 건 무엇인가요?", "오늘 내 마음을 가장 흔든 일은 무엇이었나요?", "어제의 나와 오늘의 나는 무엇이 달랐나요?",
+    "요즘 내가 아끼는 작은 습관이 있나요?", "오늘 걱정했던 일은 실제로 어땠나요?", "오늘 본 풍경 중에 기억하고 싶은 장면은?",
+    "최근에 마음이 편안했던 장소는 어디였나요?", "오늘 미뤄 둔 감정이 있다면 어떤 감정인가요?", "오늘 하루, 나에게 몇 점을 주고 싶나요? 왜인가요?",
+    "누군가에게 서운했던 일이 있었나요?", "오늘 새로 알게 된 것이 있나요?", "요즘 나를 설레게 하는 것은 무엇인가요?",
+    "오늘 혼자 있는 시간은 어땠나요?", "지금 내려놓고 싶은 것이 있나요?", "오늘 가장 나다웠던 순간은 언제였나요?",
+    "요즘 자주 듣는 노래가 있나요? 어떤 기분일 때 듣나요?", "오늘 나를 화나게 한 일이 있었다면, 그 밑에는 어떤 마음이 있었을까요?",
+    "내일의 나에게 부탁하고 싶은 것은?", "오늘 참았던 것이 있다면 무엇인가요?", "요즘 내가 고마운 사람은 누구인가요?",
+    "오늘 가장 조용했던 순간은 언제였나요?", "최근에 용기를 낸 일이 있나요?", "오늘 하루를 한 단어로 표현한다면?",
+    "어린 시절의 나에게 지금 해 주고 싶은 말은?", "오늘 마음속에 핀 꽃이 있다면 어떤 꽃일까요?",
+  ];
+  let qIdx = Math.floor(hash(today() + "q") * QUESTIONS.length), qUsed = null;
+  function showQuestion() { $("q-text").textContent = QUESTIONS[qIdx % QUESTIONS.length]; }
+  showQuestion();
+  $("q-next").onclick = () => { qIdx = (qIdx + 1) % QUESTIONS.length; showQuestion(); if (qUsed) { qUsed = QUESTIONS[qIdx]; $("walk-input").placeholder = qUsed; } };
+  $("q-use").onclick = () => { qUsed = QUESTIONS[qIdx % QUESTIONS.length]; $("walk-input").placeholder = qUsed + " 떠오르는 대로 적어 보세요."; $("walk-input").focus(); };
+
+  // ---------- Diary book: list and search ----------
+  let diaryLimit = 10;
+  $("diary-search").addEventListener("input", () => { diaryLimit = 10; renderDiary(); });
+  $("diary-more").onclick = () => { diaryLimit += 10; renderDiary(); };
+  function hl(text, q) {
+    const frag = document.createDocumentFragment();
+    if (!q) { frag.append(text); return frag; }
+    const low = text.toLowerCase(), ql = q.toLowerCase(); let i = 0, j;
+    while ((j = low.indexOf(ql, i)) >= 0) { frag.append(text.slice(i, j)); const m = document.createElement("mark"); m.textContent = text.slice(j, j + q.length); frag.append(m); i = j + q.length; }
+    frag.append(text.slice(i)); return frag;
+  }
+  function renderDiary() {
+    const q = $("diary-search").value.trim(), box = $("diary-list"); box.textContent = "";
+    const all = entries.slice().sort((a, b) => (b.date + String(b.createdAt || 0).padStart(15, "0")).localeCompare(a.date + String(a.createdAt || 0).padStart(15, "0")));
+    const list = q ? all.filter(e => [e.title, e.diary, e.original, e.question, ...e.emotions.map(x => E[x.n][0])].some(t => t && String(t).toLowerCase().includes(q.toLowerCase()))) : all;
+    $("diary-stat").textContent = all.length ? (q ? `${list.length}편 찾음` : `${all.length}편`) : "";
+    if (!all.length) { const p = document.createElement("p"); p.className = "empty"; p.textContent = "씨앗을 심으면 그날의 일기가 여기에 차곡차곡 모여요."; box.append(p); $("diary-more").hidden = true; return; }
+    if (!list.length) { const p = document.createElement("p"); p.className = "empty"; p.textContent = `"${q}"이(가) 들어간 일기가 없어요.`; box.append(p); $("diary-more").hidden = true; return; }
+    for (const e of list.slice(0, diaryLimit)) {
+      const b = document.createElement("button"); b.type = "button"; b.className = "diary-item";
+      const top = document.createElement("div"); top.className = "diary-top";
+      const t = document.createElement("span"); t.className = "diary-title"; t.append(hl(e.title, q));
+      const d = document.createElement("span"); d.className = "diary-date"; const [y, m, dd] = e.date.split("-"); d.textContent = `${y}. ${+m}. ${+dd}.`;
+      top.append(t, d);
+      const em = document.createElement("div"); em.className = "diary-emos";
+      for (const x of e.emotions) { const sp = document.createElement("span"); const i = document.createElement("i"); i.style.background = E[x.n][2]; sp.append(i, hl(E[x.n][0], q)); em.append(sp); }
+      const body = String(e.diary || e.original || "").replace(/\s+/g, " ");
+      const pk = document.createElement("div"); pk.className = "diary-peek";
+      if (q && body.toLowerCase().includes(q.toLowerCase())) { const at = body.toLowerCase().indexOf(q.toLowerCase()); pk.append(hl((at > 18 ? "…" : "") + body.slice(Math.max(0, at - 18), at + 60), q)); }
+      else pk.textContent = body.slice(0, 80) || "(일기 내용이 없어요)";
+      b.append(top, em, pk); b.onclick = () => openSheet(e); box.append(b);
+    }
+    $("diary-more").hidden = list.length <= diaryLimit;
+  }
+
+  // ---------- Emotion calendar ----------
+  let calOffset = 0;
+  $("cal-prev").onclick = () => { calOffset--; renderCalendar(); };
+  $("cal-next").onclick = () => { if (calOffset < 0) { calOffset++; renderCalendar(); } };
+  function renderCalendar() {
+    const base = new Date(); base.setDate(1); base.setMonth(base.getMonth() + calOffset);
+    const Y = base.getFullYear(), M = base.getMonth(), days = new Date(Y, M + 1, 0).getDate(), lead = (new Date(Y, M, 1).getDay() + 6) % 7;
+    $("cal-range").textContent = `${Y}년 ${M + 1}월`; $("cal-next").disabled = calOffset >= 0;
+    const box = $("cal"); box.textContent = "";
+    for (const d of DAYS) { const h = document.createElement("div"); h.className = "dow"; h.textContent = d; box.append(h); }
+    for (let i = 0; i < lead; i++) { const c = document.createElement("div"); c.className = "day out"; box.append(c); }
+    const src = shown(), tday = today(), cnt = {}; let walked = 0;
+    for (let d = 1; d <= days; d++) {
+      const key = `${Y}-${pad(M + 1)}-${pad(d)}`, list = src.filter(e => e.date === key);
+      const c = document.createElement(list.length ? "button" : "div"); c.className = "day" + (list.length ? " has" : "") + (key === tday ? " today" : "");
+      const num = document.createElement("span"); num.textContent = d; c.append(num);
+      if (list.length) {
+        walked++;
+        const main = list.reduce((a, e) => (e.emotions[0].s > a.emotions[0].s ? e : a), list[0]), n = main.emotions[0].n;
+        c.style.background = `color-mix(in srgb, ${E[n][2]} 70%, var(--surface))`;
+        const ic = document.createElement("span"); ic.className = "emo-ic"; ic.textContent = STAMP[E[n][1]]; c.append(ic);
+        if (list.length > 1) { const mo = document.createElement("span"); mo.className = "more"; mo.textContent = `+${list.length - 1}`; c.append(mo); }
+        c.type = "button"; c.setAttribute("aria-label", `${M + 1}월 ${d}일 ${list.map(e => E[e.emotions[0].n][0]).join(", ")}`);
+        c.onclick = () => openSheet(main);
+        for (const e of list) for (const x of e.emotions) cnt[x.n] = (cnt[x.n] || 0) + 1;
+      }
+      box.append(c);
+    }
+    const top = Object.entries(cnt).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([n]) => E[n][0]);
+    $("cal-summary").textContent = walked ? `이 달에는 ${walked}일 산책했어요.` + (top.length ? ` 자주 찾아온 마음: ${top.join(", ")}` : "") : "이 달에는 아직 기록이 없어요. 날짜를 누르면 그날의 일기가 열려요.";
+  }
+
+  // ---------- Walking streak and rewards ----------
+  const STREAK_REWARDS = [
+    { d: 3, petals: 10, label: "3일 연속 산책" },
+    { d: 7, decor: "pinwheel", label: "7일 연속 산책" },
+    { d: 14, petals: 30, label: "14일 연속 산책" },
+    { d: 30, decor: "startree", label: "30일 연속 산책" },
+  ];
+  function streakDays() {
+    const act = new Set(entries.flatMap(e => [e.date, ...(e.waterDays || [])]));
+    const d = new Date(); if (!act.has(ymd(d))) d.setDate(d.getDate() - 1);
+    let n = 0; while (act.has(ymd(d))) { n++; d.setDate(d.getDate() - 1); }
+    return n;
+  }
+  let claiming = false;
+  async function checkStreak() {
+    if (claiming || !store || !entries.length) return;
+    const n = streakDays(), claimed = (profile && profile.streakClaimed) || {};
+    const due = STREAK_REWARDS.find(r => n >= r.d && !claimed[r.d]);
+    if (!due) return;
+    claiming = true;
+    try {
+      const patch = { streakClaimed: { ...claimed, [due.d]: true } };
+      if (due.decor) patch.decor = { ...((profile && profile.decor) || {}), [due.decor]: { shown: true, at: Date.now() } };
+      await saveProfile(patch);
+      const dd = due.decor && DECOR.find(x => x.id === due.decor);
+      if (due.petals) earn(due.petals, `${due.label} 선물`);
+      Music.sfx("bloom");
+      setMsg($("garden-msg"), `👣 ${due.label}! ${dd ? `${dd.icon} ${eul(dd.name)} 선물로 받았어요. 정원에 놓였어요.` : `꽃잎 ${due.petals}장을 선물로 받았어요.`}`, "ok");
+      if (g3d && dd) g3d.tip(`👣 ${due.label} 선물 · ${dd.icon} ${dd.name}`, true);
+    } catch (e) {} finally { claiming = false; }
+  }
+
+  // ---------- Hidden things on the walk ----------
+  const NOTES = [
+    "천천히 가도 괜찮아요. 꽃도 하루아침에 피지 않으니까요.", "오늘 하루를 버텨 낸 당신, 그걸로 충분해요.", "마음에도 쉬는 날이 필요해요.",
+    "흐린 날이 있어야 맑은 날이 더 반가워요.", "당신이 느끼는 모든 마음은 이유가 있어요.", "작은 기쁨을 알아보는 눈이 당신에게 있어요.",
+    "잘하지 않아도 돼요. 그냥 오늘을 살아 낸 걸로 충분해요.", "누군가에게 당신은 이미 고마운 사람이에요.", "울고 싶은 날엔 울어도 괜찮아요.",
+    "내일의 걱정은 내일의 정원지기에게 맡겨요.", "당신의 속도로 걸으면 돼요.", "가끔은 아무것도 하지 않는 것도 돌봄이에요.",
+    "지나간 마음도 이 정원에서는 거름이 돼요.", "오늘의 당신에게 작은 박수를 보내요.", "바람이 불어도 뿌리는 단단해요.",
+  ];
+  const hunt = () => (profile && profile.hunt && profile.hunt.date === today()) ? profile.hunt : { date: today() };
+  async function foundHidden(kind) {
+    const h = hunt(); if (h[kind]) return;
+    try { await saveProfile({ hunt: { ...h, [kind]: true } }); } catch (e) { return; }
+    if (kind === "clover") { earn(3, "네잎클로버를 찾았어요 🍀"); Music.sfx("collect"); }
+    else { earn(2, ""); Music.sfx("letter"); showPaper(`${md(today())} · 산책길에서 주운 쪽지`, "📜 누군가 남긴 쪽지", "📜", NOTES[Math.floor(hash(today() + "note") * NOTES.length)] + "\n\n— 감정정원의 정원지기", false); }
+  }
+
+  // ---------- First-visit guide ----------
+  const GUIDE = [
+    { art: "✍️", title: "오늘의 마음을 적어요", body: "오늘 있었던 일과 느낌을 편하게 적어요.\n정원지기가 감정을 읽고 어울리는 씨앗을 골라줘요.\n막막하면 '오늘의 질문'에 답해 보세요." },
+    { art: "🌱", title: "씨앗을 심고 물을 줘요", body: "하루 한 번 물을 주면 씨앗 → 새싹 → 꽃봉오리 → 꽃으로 자라요.\n꽃이 피면 정원지기의 편지가 와요.\n첫 씨앗은 3분 뒤에 새싹이 돋아요." },
+    { art: "🏝️", title: "정원을 둘러봐요", body: "섬을 손가락으로 돌려 보고, 꽃을 누르면 그날의 일기가 열려요.\n떨어지는 반짝이는 꽃잎을 모아 정원을 꾸미고,\n섬 안으로 들어가 산책도 할 수 있어요." },
+  ];
+  let guideStep = 0;
+  function renderGuide() {
+    const g = GUIDE[guideStep];
+    $("guide-art").textContent = g.art; $("guide-step-title").textContent = g.title; $("guide-step-body").textContent = g.body;
+    $("guide-dots").textContent = ""; GUIDE.forEach((_, i) => { const d = document.createElement("span"); if (i === guideStep) d.className = "on"; $("guide-dots").append(d); });
+    $("guide-prev").hidden = guideStep === 0; $("guide-next").textContent = guideStep === GUIDE.length - 1 ? "시작하기" : "다음";
+  }
+  function closeGuide() { $("guide-dlg").close(); try { localStorage.setItem("emotion-garden-guided", "1"); } catch (e) {} }
+  function openGuide() { guideStep = 0; renderGuide(); $("guide-dlg").showModal(); }
+  $("guide-next").onclick = () => { if (guideStep < GUIDE.length - 1) { guideStep++; renderGuide(); } else { closeGuide(); $("walk-input").focus(); } };
+  $("guide-prev").onclick = () => { if (guideStep > 0) { guideStep--; renderGuide(); } };
+  $("guide-skip").onclick = closeGuide;
+  $("help-btn").onclick = openGuide;
+  setTimeout(() => {
+    let seen = false; try { seen = localStorage.getItem("emotion-garden-guided") === "1"; } catch (e) {}
+    if (!seen && !entries.length && !document.querySelector("dialog[open]")) openGuide();
+  }, 2500);
 
   // ---------- Weekly walk map ----------
   const MOODS = [
@@ -2009,8 +2299,8 @@ ${lines}
     }
 
     // ---- decorations bought with petals ----
-    const DECOR_SPOT = { mushroom: [0.55, 0.84], cairn: [0.2, 0.86], chime: [1.3, 0.86], lamp: [1.95, 0.86], bench: [3.05, 0.84], birdhouse: [3.6, 0.86], pond: [4.65, 0.78], arch: [-0.6, 0.9] };
-    const decorObstacles = [], decorGlows = []; let decorGroup = null, decorKey = "", chimeStrip = null;
+    const DECOR_SPOT = { pinwheel: [1.62, -0.95], startree: [3.33, -1.05], mushroom: [0.55, 0.84], cairn: [0.2, 0.86], chime: [1.3, 0.86], lamp: [1.95, 0.86], bench: [3.05, 0.84], birdhouse: [3.6, 0.86], pond: [4.65, 0.78], arch: [-0.6, 0.9] };
+    const decorObstacles = [], decorGlows = []; let decorGroup = null, decorKey = "", chimeStrip = null, pinwheel = null;
     function buildDecor(id) {
       const g = new T.Group(); let r = 0.35;
       switch (id) {
@@ -2068,6 +2358,29 @@ ${lines}
           const lot = new T.Group(); lot.position.set(0.2, 0.05, 0.1); petalRing(lot, 7, 0.06, 0.025, "#f7b8cf", 0.6); g.add(lot);
           r = 0.65; break;
         }
+        case "pinwheel": {
+          const stick = mesh(new T.CylinderGeometry(0.02, 0.025, 1.1, 8), mat("#f3efe6")); stick.position.y = 0.55; g.add(stick);
+          pinwheel = new T.Group(); pinwheel.position.set(0, 1.08, 0.05);
+          ["#ef5a5a", "#f6c431", "#5ab27a", "#5a8fe0"].forEach((col, i) => {
+            const bl = new T.Shape(); bl.moveTo(0, 0); bl.lineTo(0.22, 0.02); bl.lineTo(0.02, 0.2); bl.lineTo(0, 0);
+            const m2 = mesh(new T.ShapeGeometry(bl), mat(col, { side: T.DoubleSide })); m2.rotation.z = i * Math.PI / 2; pinwheel.add(m2);
+          });
+          const pin = mesh(new T.SphereGeometry(0.03, 10, 8), mat("#ffffff")); pin.position.z = 0.01; pinwheel.add(pin);
+          g.add(pinwheel); r = 0.2; break;
+        }
+        case "startree": {
+          const trunk = mesh(new T.CylinderGeometry(0.06, 0.1, 1.2, 8), mat("#5d4a6e")); trunk.position.y = 0.6; g.add(trunk);
+          for (const [x, y, z, rr] of [[0, 1.35, 0, 0.45], [0.28, 1.15, 0.1, 0.3], [-0.25, 1.2, -0.1, 0.32], [0.05, 1.6, -0.05, 0.3]]) {
+            const cn = mesh(new T.IcosahedronGeometry(rr, 1), mat("#3d4f8a", { flatShading: true })); cn.position.set(x, y, z); g.add(cn);
+          }
+          const starMat = new T.MeshStandardMaterial({ color: lin("#fff3b0"), emissive: lin("#ffd95a"), emissiveIntensity: 0.6, roughness: 0.4 });
+          for (let i = 0; i < 9; i++) {
+            const a = i * 2.4, yy = 1.05 + (i % 4) * 0.17, rr = 0.42 - (i % 4) * 0.05;
+            const st = mesh(new T.OctahedronGeometry(0.05, 0), starMat); st.position.set(Math.cos(a) * rr, yy, Math.sin(a) * rr); g.add(st);
+            const gl = glow("#ffe27a", 0.45, 0.25); gl.position.copy(st.position); g.add(gl); decorGlows.push({ sprite: gl, mat: starMat, always: true });
+          }
+          r = 0.4; break;
+        }
         case "arch": {
           const arc = mesh(new T.TorusGeometry(0.62, 0.035, 8, 36, Math.PI), mat("#8a6a4a")); arc.position.y = 0.9; g.add(arc);
           for (const x of [-0.62, 0.62]) { const leg = mesh(new T.CylinderGeometry(0.035, 0.04, 0.9, 8), mat("#8a6a4a")); leg.position.set(x, 0.45, 0); g.add(leg); }
@@ -2089,11 +2402,11 @@ ${lines}
       if (key === decorKey) return;
       decorKey = key;
       if (decorGroup) world.remove(decorGroup);
-      decorObstacles.length = 0; decorGlows.length = 0; chimeStrip = null;
+      decorObstacles.length = 0; decorGlows.length = 0; chimeStrip = null; pinwheel = null;
       decorGroup = new T.Group();
       for (const id of shownIds) {
-        const [ang, rf] = DECOR_SPOT[id], d = buildDecor(id);
-        const x = Math.cos(ang) * islandR * rf, z = Math.sin(ang) * islandR * rf;
+        const [ang, rf] = DECOR_SPOT[id], d = buildDecor(id), rad = rf < 0 ? islandR + rf : islandR * rf;
+        const x = Math.cos(ang) * rad, z = Math.sin(ang) * rad;
         d.position.set(x, 0, z);
         d.rotation.y = id === "arch" ? -ang + Math.PI / 2 : -ang - Math.PI / 2;
         if (d.userData.archLegs) { const sx = -Math.sin(ang) * 0.62, sz = Math.cos(ang) * 0.62; decorObstacles.push({ x: x + sx, z: z + sz, r: 0.15 }, { x: x - sx, z: z - sz, r: 0.15 }); }
@@ -2102,6 +2415,48 @@ ${lines}
         decorGroup.add(d);
       }
       world.add(decorGroup); applySky();
+    }
+
+    // ---- hidden clover and note for the walk ----
+    let huntGroup = null, huntKey = "", huntItems = [];
+    function syncHunt() {
+      const h = hunt(), key = `${today()}|${islandR}|${!!h.clover}|${!!h.note}|${entries.length > 0}`;
+      if (key === huntKey) return; huntKey = key;
+      if (huntGroup) world.remove(huntGroup); huntGroup = new T.Group(); huntItems = [];
+      if (!entries.length) { world.add(huntGroup); return; }
+      const taken = [...plants.values()].map(p => [p.group.position.x, p.group.position.z]).concat(obstacles.concat(decorObstacles).map(o => [o.x, o.z]));
+      const spot = seed => { for (let k = 0; k < 40; k++) { const a = hash(seed + k) * 6.283, d = (0.35 + hash(seed + "d" + k) * 0.5) * islandR; const x = Math.cos(a) * d, z = Math.sin(a) * d; if (taken.every(([tx, tz]) => Math.hypot(tx - x, tz - z) > 0.9)) { taken.push([x, z]); return [x, z]; } } return [0, 0]; };
+      if (!h.clover) {
+        const c = new T.Group(); const [x, z] = spot(today() + "clover"); c.position.set(x, 0.02, z);
+        for (let i = 0; i < 4; i++) { const lf = mesh(new T.SphereGeometry(1, 12, 8), mat("#3f9a4a")); lf.scale.set(0.06, 0.012, 0.055); const a = i * Math.PI / 2 + 0.4; lf.position.set(Math.cos(a) * 0.05, 0.16, Math.sin(a) * 0.05); c.add(lf); }
+        const st = mesh(new T.CylinderGeometry(0.006, 0.006, 0.16, 5), mat(LEAF)); st.position.y = 0.08; c.add(st);
+        const sh = glow("#d8ffb0", 0.35, 0.35); sh.position.y = 0.17; c.add(sh);
+        c.userData.hunt = "clover"; huntItems.push(c); huntGroup.add(c);
+      }
+      if (!h.note) {
+        const c = new T.Group(); const [x, z] = spot(today() + "note"); c.position.set(x, 0.05, z);
+        const roll = mesh(new T.CylinderGeometry(0.035, 0.035, 0.2, 12), mat("#efe2c4")); roll.rotation.z = Math.PI / 2; c.add(roll);
+        const rib = mesh(new T.TorusGeometry(0.037, 0.008, 6, 14), mat("#c4553f")); rib.rotation.y = Math.PI / 2; c.add(rib);
+        const sh = glow("#fff1c4", 0.35, 0.35); sh.position.y = 0.05; c.add(sh);
+        c.userData.hunt = "note"; huntItems.push(c); huntGroup.add(c);
+      }
+      huntGroup.visible = mode === "walk"; world.add(huntGroup);
+      syncHuntChip();
+    }
+    function syncHuntChip() {
+      const h = hunt(), chip = $("hunt-chip");
+      chip.hidden = !(mode === "walk" && entries.length);
+      chip.textContent = `오늘의 숨은 찾기 · 🍀 ${h.clover ? "찾음" : "?"} · 📜 ${h.note ? "찾음" : "?"}`;
+    }
+    function stepHunt(now) {
+      if (!huntGroup) return;
+      huntGroup.visible = mode === "walk";
+      if (mode !== "walk") return;
+      for (const c of huntItems) {
+        if (c.userData.done) continue;
+        if (!reduce.matches) c.rotation.y = now / 1500;
+        if (Math.hypot(c.position.x - walker.x, c.position.z - walker.z) < 0.6) { c.userData.done = true; c.visible = false; foundHidden(c.userData.hunt); }
+      }
     }
 
     // ---- shimmering petals to collect ----
@@ -2175,7 +2530,7 @@ ${lines}
       cloudMat.color.copy(lin(s.night ? "#3b4252" : skyKey === "dusk" ? "#f6dcdc" : skyKey === "dawn" ? "#fff0ea" : "#ffffff")); cloudMat.opacity = s.night ? 0.55 : 0.9;
       renderer.toneMappingExposure = s.night ? 1.25 : 1.12;
       if (lanternGlow) lanternGlow.material.opacity = s.night ? 0.95 : skyKey === "dusk" ? 0.4 : 0;
-      for (const dg of decorGlows) { dg.sprite.material.opacity = s.night ? 0.9 : skyKey === "dusk" ? 0.35 : 0; dg.mat.emissiveIntensity = s.night ? 1.6 : skyKey === "dusk" ? 0.6 : 0; }
+      for (const dg of decorGlows) { dg.sprite.material.opacity = s.night ? 0.9 : skyKey === "dusk" ? 0.35 : dg.always ? 0.2 : 0; dg.mat.emissiveIntensity = s.night ? 1.6 : skyKey === "dusk" ? 0.6 : dg.always ? 0.5 : 0; }
       for (const p of plants.values()) if (p.group.userData.glow) p.group.userData.glow.material.opacity = s.night ? 0.5 : skyKey === "dusk" ? 0.15 : 0;
       flies.visible = s.night;
       lanternMat.emissiveIntensity = s.night ? 1.4 : skyKey === "dusk" ? 0.6 : 0;
@@ -2248,6 +2603,7 @@ ${lines}
       if (R !== islandR) { buildIsland(R); buildFlies(R); applySeason(); }
       syncBirthIslet();
       syncDecor();
+      syncHunt();
       const seen = new Set();
       sorted.forEach((e, i) => {
         seen.add(e.id);
@@ -2340,13 +2696,13 @@ ${lines}
       $("walk-btn").hidden = true;
       scene.fog = new T.Fog(new T.Color(SKIES[skyKey].bottom), 5, islandR * 3 + 6);
       startTransition(new T.Vector3(walker.x, eyeH, walker.z), eyeQuat(walker.yaw, walker.pitch), 62, () => {
-        mode = "walk"; $("exit-walk").hidden = false; $("joy").hidden = false; $("eye-btn").hidden = false; syncFullWater();
+        mode = "walk"; $("exit-walk").hidden = false; $("joy").hidden = false; $("eye-btn").hidden = false; syncHuntChip(); syncFullWater();
         showTip(matchMedia("(pointer: coarse)").matches ? "왼쪽 아래 동그라미로 걷고, 화면을 끌어서 둘러봐요" : "WASD나 방향키로 걷고, 마우스로 끌어서 둘러봐요");
       });
     }
     function exitWalk() {
       if (mode !== "walk") return;
-      $("exit-walk").hidden = true; $("joy").hidden = true; $("eye-btn").hidden = true; $("near").hidden = true; nearId = null; keys.clear(); joyVec.x = joyVec.y = 0;
+      $("exit-walk").hidden = true; $("joy").hidden = true; $("eye-btn").hidden = true; $("hunt-chip").hidden = true; $("near").hidden = true; nearId = null; keys.clear(); joyVec.x = joyVec.y = 0;
       startTransition(orbitSaved.pos, orbitSaved.quat, orbitSaved.fov, () => {
         mode = "orbit"; scene.fog = null; host.classList.remove("walking"); resize();
         controls.enabled = true; controls.update(); $("walk-btn").hidden = false; syncFullWater();
@@ -2505,6 +2861,8 @@ ${lines}
       const dt = Math.min(0.05, (now - (lastNow || now)) / 1000); lastNow = now;
       stepFall(dt, now);
       stepCollects(dt, now);
+      stepHunt(now);
+      if (pinwheel && !reduce.matches) pinwheel.rotation.z -= dt * 2.4;
       if (chimeStrip) { const kick = chimeKick ? Math.max(0, 1 - (now - chimeKick) / 2500) : 0; chimeStrip.rotation.z = (reduce.matches ? 0 : Math.sin(now / 700) * 0.12) + Math.sin(now / 120) * 0.35 * kick; }
       if (!reduce.matches) {
         for (const f of floaters) { f.position.y = f.userData.baseY + Math.sin(now / 2200 + f.userData.phase) * 0.18; f.rotation.y += dt * 0.06; }
@@ -2706,6 +3064,10 @@ ${lines}
     renderWeek();
     renderBirthday();
     renderWallet();
+    renderDiary();
+    renderCalendar();
+    setTimeout(checkStreak, 0);
+    { const n = entries.length ? streakDays() : 0, gs = $("garden-stat"), base = gs.textContent.replace(/^👣 \d+일 연속 · /, ""); gs.textContent = n >= 2 ? `👣 ${n}일 연속 · ${base}` : base; }
     if (openId && $("sheet").open) { const e = shown().find(x => x.id === openId); if (e) fillSheet(e); }
   }
   function chip(name, col, on, s) {
@@ -2738,6 +3100,8 @@ ${lines}
     const emos = $("sheet-emos"); emos.textContent = "";
     for (const x of e.emotions) emos.append(chip(E[x.n][0], E[x.n][2], true, x.s));
     $("sheet-diary").textContent = e.diary || "(일기 내용이 없어요)";
+    $("sheet-q").hidden = !e.question; $("sheet-q").textContent = e.question ? `🌿 ${e.question}` : "";
+    fillSafety($("sheet-safety"), (e.diary || "") + " " + (e.original || ""));
     const hasOrig = e.original && e.original !== e.diary;
     $("sheet-orig-box").hidden = !hasOrig; $("sheet-orig").textContent = e.original || "";
     const lb = $("sheet-letter");
@@ -2749,12 +3113,67 @@ ${lines}
     wb.disabled = !needsWater(e);
     wb.textContent = needsWater(e) ? "물 주기" : "오늘은 물을 줬어요";
     $("sheet-del").hidden = !!e.example;
+    $("sheet-edit").hidden = !!e.example;
   }
   function openSheet(e) {
     openId = e.id; fillSheet(e);
+    $("sheet-view").hidden = false; $("sheet-editor").hidden = true;
     $("sheet-actions").hidden = false; $("sheet-confirm").hidden = true;
     sheet.showModal();
   }
+  // ----- editing a planted diary -----
+  let edit = null;
+  function renderEdEmos() {
+    const box = $("ed-emos"); box.textContent = "";
+    edit.emotions.forEach((x, i) => {
+      const row = document.createElement("div"); row.className = "emo-row";
+      const nm = document.createElement("span"); nm.className = "name";
+      const d = document.createElement("span"); d.className = "dot"; d.style.background = E[x.n][2];
+      nm.append(d, document.createTextNode(E[x.n][0] + (i === 0 ? " · 주된 감정" : "")));
+      const lv = document.createElement("span"); lv.className = "lv"; lv.setAttribute("role", "group"); lv.setAttribute("aria-label", E[x.n][0] + " 세기");
+      for (let s2 = 1; s2 <= 5; s2++) { const b = document.createElement("button"); b.type = "button"; b.textContent = s2; b.setAttribute("aria-pressed", String(s2 === x.s)); b.onclick = () => { x.s = s2; renderEdEmos(); }; lv.append(b); }
+      const rm = document.createElement("button"); rm.type = "button"; rm.className = "ghost x"; rm.textContent = "빼기"; rm.disabled = edit.emotions.length <= 1;
+      rm.onclick = () => { edit.emotions.splice(i, 1); renderEdEmos(); renderEdPicker(!$("ed-picker").hidden); };
+      row.append(nm, lv, rm); box.append(row);
+    });
+    $("ed-add").hidden = edit.emotions.length >= 3;
+  }
+  function renderEdPicker(open) {
+    const p = $("ed-picker"); p.hidden = !open; p.textContent = ""; if (!open) return;
+    for (const [fam, [fname]] of Object.entries(FAMILIES)) {
+      const chips = document.createElement("div"); chips.className = "chips";
+      for (const [n, [name, f, col]] of Object.entries(E)) {
+        if (f !== fam) continue;
+        const on = edit.emotions.some(x => x.n === +n);
+        const b = document.createElement("button"); b.type = "button"; b.setAttribute("aria-pressed", String(on));
+        const d = document.createElement("span"); d.className = "dot"; d.style.background = col; b.append(d, document.createTextNode(name));
+        b.disabled = (!on && edit.emotions.length >= 3) || (on && edit.emotions.length <= 1);
+        b.onclick = () => { const i = edit.emotions.findIndex(x => x.n === +n); if (i >= 0) edit.emotions.splice(i, 1); else if (edit.emotions.length < 3) edit.emotions.push({ n: +n, s: 3 }); renderEdEmos(); renderEdPicker(true); };
+        chips.append(b);
+      }
+      const fl = document.createElement("div"); fl.className = "family-name"; fl.textContent = fname; p.append(fl, chips);
+    }
+  }
+  $("sheet-edit").onclick = () => {
+    const e = entries.find(x => x.id === openId); if (!e) return;
+    edit = { id: e.id, emotions: e.emotions.map(x => ({ ...x })) };
+    $("ed-title").value = e.title; $("ed-diary").value = e.diary || "";
+    setMsg($("ed-msg"), ""); renderEdEmos(); renderEdPicker(false);
+    $("sheet-view").hidden = true; $("sheet-editor").hidden = false; $("ed-title").focus();
+  };
+  $("ed-add").onclick = () => renderEdPicker($("ed-picker").hidden);
+  $("ed-cancel").onclick = () => { edit = null; $("sheet-editor").hidden = true; $("sheet-view").hidden = false; };
+  $("ed-save").onclick = async () => {
+    if (!edit) return;
+    const title = $("ed-title").value.trim().slice(0, 40), diary = $("ed-diary").value.trim();
+    if (!title) { setMsg($("ed-msg"), "제목을 적어 주세요.", "err"); $("ed-title").focus(); return; }
+    try {
+      await (store || localStore).update(edit.id, { title, diary, emotions: edit.emotions.map(x => ({ n: x.n, s: x.s })), v: 2 });
+      edit = null; $("sheet-editor").hidden = true; $("sheet-view").hidden = false;
+      const e = entries.find(x => x.id === openId); if (e) fillSheet(e);
+      setMsg($("garden-msg"), "일기를 고쳤어요.", "ok");
+    } catch (err) { setMsg($("ed-msg"), "저장하지 못했어요. 다시 시도해 주세요.", "err"); }
+  };
   $("sheet-water").onclick = async () => {
     const e = entries.find(x => x.id === openId); if (!e || !needsWater(e)) return;
     try { const st = await water(e); setMsg($("garden-msg"), st === 3 ? `${iga(plantName(e.emotions[0].n))} 피었어요 🌸` : `${STAGES[st]}로 자랐어요.`, "ok"); }
