@@ -281,6 +281,7 @@ mark { background: color-mix(in srgb, var(--accent) 22%, transparent); color: in
 .chat-form textarea { min-height: 0; flex: 1; resize: none; }
 .chat-form button { flex: none; }
 .chat-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.chat-foot .link-btn { white-space: nowrap; flex-shrink: 0; }
 #garden3d.walking .walk-tip { top: 204px; }
 #garden3d.full .hunt-chip { left: calc(12px + env(safe-area-inset-left, 0px)); margin-top: env(safe-area-inset-top, 0px); }
 .guide-sheet { align-items: center; text-align: center; padding: 28px 22px 20px; }
