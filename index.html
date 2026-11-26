@@ -136,6 +136,14 @@ canvas { display: block; width: 100%; cursor: pointer; touch-action: manipulatio
 .shop-name { font-weight: 600; }
 .shop-desc { font-size: 0.8rem; color: var(--muted); }
 .shop-item button { padding: 6px 14px; white-space: nowrap; }
+.shop-acts { display: flex; flex-direction: column; gap: 4px; align-items: stretch; }
+.shop-count { font-size: 0.75rem; color: var(--accent); margin-top: 2px; }
+.place-bar, .decor-bar { left: 50%; transform: translateX(-50%); bottom: 14px; border-radius: 999px; display: flex; align-items: center; gap: 6px; padding: 6px 8px 6px 14px; white-space: nowrap; max-width: calc(100% - 24px); }
+.place-bar button, .decor-bar button { padding: 5px 12px; font-size: 0.82rem; background: #fff; color: #23302a; border-color: #c9d5cb; }
+.decor-bar .decor-x { border: none; background: transparent; padding: 5px 8px; }
+.decor-name { font-weight: 600; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; }
+#garden3d.full .place-bar, #garden3d.full .decor-bar { bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
+#garden3d.placing canvas { cursor: crosshair; }
 .full-water { left: 12px; bottom: 14px; padding: 8px 14px; font-weight: 600; color: #1d5fa8; }
 #garden3d.full { position: fixed; inset: 0; z-index: 50; height: 100%; min-height: 0; }
 #garden3d.full .time-chip { right: calc(12px + env(safe-area-inset-right, 0px)); margin-top: env(safe-area-inset-top, 0px); }
@@ -385,6 +393,14 @@ mark { background: color-mix(in srgb, var(--accent) 22%, transparent); color: in
         <button type="button" class="glass exit-btn" id="exit-walk" hidden>⬆ 섬 위로 돌아가기</button>
         <button type="button" class="glass eye-btn" id="eye-btn" hidden></button>
         <div class="glass hunt-chip" id="hunt-chip" hidden></div>
+        <div class="glass place-bar" id="place-bar" hidden role="status"><span id="place-text"></span><button type="button" id="place-cancel">그만두기</button></div>
+        <div class="glass decor-bar" id="decor-bar" hidden>
+          <span class="decor-name" id="decor-name"></span>
+          <button type="button" id="decor-move">옮기기</button>
+          <button type="button" id="decor-rot">돌리기</button>
+          <button type="button" id="decor-del">치우기</button>
+          <button type="button" class="decor-x" id="decor-x" aria-label="닫기">✕</button>
+        </div>
         <div class="joy" id="joy" hidden aria-label="걷기 조이스틱"><div class="knob" id="knob"></div></div>
         <div class="glass near" id="near" hidden>
           <div class="near-name" id="near-name"></div>
@@ -571,6 +587,7 @@ mark { background: color-mix(in srgb, var(--accent) 22%, transparent); color: in
   <div class="sheet">
     <div class="panel-head"><h3>정원 꾸미기</h3><span class="seed-name" id="shop-balance"></span></div>
     <p class="hint">정원에 가끔 떨어지는 반짝이는 꽃잎을 눌러 모으세요(하루 20장까지). 씨앗을 심으면 5장, 물을 주면 1장, 꽃이 피면 6장을 더 받아요.</p>
+    <p class="hint">산 소품은 섬을 눌러 원하는 자리에 놓아요. 놓인 소품을 누르면 옮기기, 돌리기, 치우기를 할 수 있어요. 작은 소품은 5개, 큰 소품(벤치, 새집, 연못, 꽃 아치)은 3개까지 가질 수 있어요.</p>
     <div class="shop-list" id="shop-list"></div>
     <div class="row"><button type="button" class="primary" id="shop-close">닫기</button><span class="msg" id="shop-msg" role="status"></span></div>
   </div>
@@ -704,7 +721,7 @@ mark { background: color-mix(in srgb, var(--accent) 22%, transparent); color: in
     if (!file) return;
     let list;
     let wk = {};
-    try { const j = JSON.parse(await file.text()); list = Array.isArray(j) ? j : j.entries; if (!Array.isArray(list)) throw 0; if (j && j.weeks && typeof j.weeks === "object") wk = j.weeks; if (j && j.profile && !(profile && profile.petals) && Number(j.profile.petals) > 0) { try { await saveProfile({ petals: Math.min(99999, Math.floor(Number(j.profile.petals))), decor: typeof j.profile.decor === "object" && j.profile.decor ? j.profile.decor : {} }); } catch (e) {} } if (j && j.profile && !hasBirthday() && Number(j.profile.birthMonth) >= 1 && Number(j.profile.birthMonth) <= 12) { const bm = Number(j.profile.birthMonth), bd = Number(j.profile.birthDay) || null; try { await saveProfile({ birthMonth: bm, birthDay: bd && bd >= 1 && bd <= 31 ? bd : null, bdayLetters: typeof j.profile.bdayLetters === "object" && j.profile.bdayLetters ? j.profile.bdayLetters : {} }); } catch (e) {} } }
+    try { const j = JSON.parse(await file.text()); list = Array.isArray(j) ? j : j.entries; if (!Array.isArray(list)) throw 0; if (j && j.weeks && typeof j.weeks === "object") wk = j.weeks; if (j && j.profile && !(profile && profile.petals) && Number(j.profile.petals) > 0) { try { await saveProfile({ petals: Math.min(99999, Math.floor(Number(j.profile.petals))), decor: typeof j.profile.decor === "object" && j.profile.decor ? j.profile.decor : {}, ...(Array.isArray(j.profile.placed) ? { placed: j.profile.placed.filter(x => x && DEFAULT_SPOT[x.id]).slice(0, 60).map(x => ({ uid: String(x.uid || newUid()).slice(0, 24), id: x.id, a: Number(x.a) || 0, f: Math.min(0.93, Math.max(0, Number(x.f) || 0.5)), rot: Number(x.rot) || 0 })), owned: Object.fromEntries(Object.entries(j.profile.owned || {}).filter(([k]) => DEFAULT_SPOT[k]).map(([k, v]) => [k, Math.min(5, Math.max(0, Math.floor(Number(v) || 0)))])) } : {}) }); } catch (e) {} } if (j && j.profile && !hasBirthday() && Number(j.profile.birthMonth) >= 1 && Number(j.profile.birthMonth) <= 12) { const bm = Number(j.profile.birthMonth), bd = Number(j.profile.birthDay) || null; try { await saveProfile({ birthMonth: bm, birthDay: bd && bd >= 1 && bd <= 31 ? bd : null, bdayLetters: typeof j.profile.bdayLetters === "object" && j.profile.bdayLetters ? j.profile.bdayLetters : {} }); } catch (e) {} } }
     catch (e) { setMsg(msg, "감정정원 백업 파일이 아니에요. 백업 받은 .json 파일을 골라 주세요.", "err"); return; }
     let added = 0, skipped = 0;
     for (const raw of list) {
@@ -1092,16 +1109,16 @@ ${entries.length ? `지금까지 ${entries.length}그루의 마음을 이 정원
   }
   // ---------- Petals & decorations ----------
   const DECOR = [
-    { id: "mushroom", name: "버섯 무리", icon: "🍄", price: 6, desc: "비 온 다음 날 쏙 올라온 버섯들" },
-    { id: "cairn", name: "돌탑", icon: "🪨", price: 8, desc: "소원을 하나씩 얹어 쌓은 돌탑" },
-    { id: "chime", name: "풍경", icon: "🎐", price: 10, desc: "바람에 흔들리고, 누르면 맑은 소리가 나요" },
-    { id: "lamp", name: "초롱", icon: "🏮", price: 12, desc: "밤이 되면 불이 켜져요" },
-    { id: "bench", name: "나무 벤치", icon: "🪑", price: 15, desc: "잠깐 앉아 쉬어 가는 자리" },
-    { id: "birdhouse", name: "새집", icon: "🐦", price: 18, desc: "작은 새가 놀러 오는 집" },
-    { id: "pond", name: "작은 연못", icon: "💧", price: 25, desc: "연잎이 떠 있는 동그란 연못" },
-    { id: "arch", name: "꽃 아치", icon: "🌸", price: 30, desc: "산책길 입구를 꾸미는 꽃 아치" },
-    { id: "pinwheel", name: "무지개 바람개비", icon: "🎡", reward: 7, desc: "7일 연속 산책 선물 · 바람에 빙글빙글" },
-    { id: "startree", name: "별빛 나무", icon: "🌟", reward: 30, desc: "30일 연속 산책 선물 · 밤이면 별 열매가 빛나요" },
+    { id: "mushroom", max: 5, name: "버섯 무리", icon: "🍄", price: 6, desc: "비 온 다음 날 쏙 올라온 버섯들" },
+    { id: "cairn", max: 5, name: "돌탑", icon: "🪨", price: 8, desc: "소원을 하나씩 얹어 쌓은 돌탑" },
+    { id: "chime", max: 5, name: "풍경", icon: "🎐", price: 10, desc: "바람에 흔들리고, 누르면 맑은 소리가 나요" },
+    { id: "lamp", max: 5, name: "초롱", icon: "🏮", price: 12, desc: "밤이 되면 불이 켜져요" },
+    { id: "bench", max: 3, name: "나무 벤치", icon: "🪑", price: 15, desc: "잠깐 앉아 쉬어 가는 자리" },
+    { id: "birdhouse", max: 3, name: "새집", icon: "🐦", price: 18, desc: "작은 새가 놀러 오는 집" },
+    { id: "pond", max: 3, name: "작은 연못", icon: "💧", price: 25, desc: "연잎이 떠 있는 동그란 연못" },
+    { id: "arch", max: 3, name: "꽃 아치", icon: "🌸", price: 30, desc: "산책길 입구를 꾸미는 꽃 아치" },
+    { id: "pinwheel", max: 1, name: "무지개 바람개비", icon: "🎡", reward: 7, desc: "7일 연속 산책 선물 · 바람에 빙글빙글" },
+    { id: "startree", max: 1, name: "별빛 나무", icon: "🌟", reward: 30, desc: "30일 연속 산책 선물 · 밤이면 별 열매가 빛나요" },
   ];
   const COLLECT_CAP = 20;
   let petalBuffer = 0, collectBuffer = 0, petalTimer = null;
@@ -1135,39 +1152,76 @@ ${entries.length ? `지금까지 ${entries.length}그루의 마음을 이 정원
     $("shop-balance").textContent = `🌸 ${n}장`;
     if ($("shop").open) renderShop();
   }
+  // where each item goes when it is placed automatically: [angle, distance] (distance < 1: share of the island radius, < 0: that far in from the rim)
+  const DEFAULT_SPOT = { pinwheel: [1.62, -0.95], startree: [3.33, -1.05], mushroom: [0.55, 0.84], cairn: [0.2, 0.86], chime: [1.3, 0.86], lamp: [1.95, 0.86], bench: [3.05, 0.84], birdhouse: [3.6, 0.86], pond: [4.65, 0.78], arch: [-0.6, 0.9] };
+  const spotToPolar = (id, k = 0) => { const [a, rf] = DEFAULT_SPOT[id]; const f = rf < 0 ? 1 + rf / 6 : rf; return { a: a + k * 0.32, f: Math.min(0.92, f) }; };
+  const newUid = () => "d" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  // decorations: how many of each you own, and where each placed one stands (older saves kept one of each in `decor`)
+  function decorState() {
+    if (profile && Array.isArray(profile.placed)) return { owned: { ...(profile.owned || {}) }, placed: profile.placed.map(x => ({ ...x })) };
+    const old = (profile && profile.decor) || {}, owned = {}, placed = [];
+    for (const [id, v] of Object.entries(old)) { if (!DEFAULT_SPOT[id]) continue; owned[id] = 1; if (v && v.shown) placed.push({ uid: "m" + id, id, ...spotToPolar(id), rot: 0 }); }
+    return { owned, placed };
+  }
+  const saveDecor = (owned, placed, extra) => saveProfile({ owned, placed, ...(extra || {}) });
   function renderShop() {
     const box = $("shop-list"); box.textContent = "";
-    const owned = (profile && profile.decor) || {}, n = petalsNow();
+    const { owned, placed } = decorState(), n = petalsNow();
     for (const d of DECOR) {
+      const have = owned[d.id] || 0, out = placed.filter(x => x.id === d.id).length, free = have - out;
       const row = document.createElement("div"); row.className = "shop-item";
       const ic = document.createElement("div"); ic.className = "shop-icon"; ic.textContent = d.icon;
       const tx = document.createElement("div"); tx.className = "shop-text";
       const nm = document.createElement("div"); nm.className = "shop-name"; nm.textContent = d.name;
       const ds = document.createElement("div"); ds.className = "shop-desc"; ds.textContent = d.desc;
       tx.append(nm, ds);
-      const b = document.createElement("button"); b.type = "button";
-      const mine = owned[d.id];
-      if (!mine && d.reward) { b.className = "ghost"; b.textContent = `👣 ${d.reward}일`; b.disabled = true; b.setAttribute("aria-label", `${d.name}: ${d.reward}일 연속 산책하면 받아요`); }
-      else if (!mine) { b.className = "primary"; b.textContent = `🌸 ${d.price}`; b.disabled = n < d.price; b.setAttribute("aria-label", `${d.name} 꽃잎 ${d.price}장으로 사기`); b.onclick = () => buyDecor(d); }
-      else { b.className = mine.shown ? "ghost" : ""; b.textContent = mine.shown ? "치우기" : "놓기"; b.onclick = () => toggleDecor(d); }
-      row.append(ic, tx, b); box.append(row);
+      if (have) { const ct = document.createElement("div"); ct.className = "shop-count"; ct.textContent = `가진 ${have}/${d.max}` + (free ? ` · 놓지 않은 ${free}개` : ""); tx.append(ct); }
+      const acts = document.createElement("div"); acts.className = "shop-acts";
+      if (d.reward && !have) { const b = document.createElement("button"); b.type = "button"; b.className = "ghost"; b.textContent = `👣 ${d.reward}일`; b.disabled = true; b.setAttribute("aria-label", `${d.name}: ${d.reward}일 연속 산책하면 받아요`); acts.append(b); }
+      if (!d.reward) {
+        const b = document.createElement("button"); b.type = "button"; b.className = "primary";
+        b.textContent = have >= d.max ? "최대" : `🌸 ${d.price}`; b.disabled = have >= d.max || n < d.price;
+        b.setAttribute("aria-label", have >= d.max ? `${d.name}: 최대 ${d.max}개까지 가질 수 있어요` : `${d.name} 꽃잎 ${d.price}장으로 사기`);
+        b.onclick = () => buyDecor(d); acts.append(b);
+      }
+      if (free > 0) { const b = document.createElement("button"); b.type = "button"; b.className = "ghost"; b.textContent = "놓기"; b.onclick = () => startPlacing(d.id); acts.append(b); }
+      row.append(ic, tx, acts); box.append(row);
     }
   }
   async function buyDecor(d) {
-    const total = petalsNow(); if (total < d.price) return;
+    const total = petalsNow(), { owned, placed } = decorState();
+    if (total < d.price || (owned[d.id] || 0) >= d.max) return;
     clearTimeout(petalTimer);
     const c = collectBuffer, base = (profile && profile.petalDay && profile.petalDay.date === today()) ? profile.petalDay.n : 0;
     petalBuffer = 0; collectBuffer = 0;
+    owned[d.id] = (owned[d.id] || 0) + 1;
     try {
-      await saveProfile({ petals: total - d.price, petalDay: { date: today(), n: base + c }, decor: { ...((profile && profile.decor) || {}), [d.id]: { shown: true, at: Date.now() } } });
-      Music.sfx("bloom"); setMsg($("shop-msg"), `${d.icon} ${eul(d.name)} 정원에 놓았어요.`, "ok"); if (g3d) g3d.tip(`${d.icon} ${eul(d.name)} 놓았어요`, true);
+      await saveDecor(owned, placed, { petals: total - d.price, petalDay: { date: today(), n: base + c } });
+      Music.sfx("bloom");
+      startPlacing(d.id);
     } catch (e) { petalBuffer = total - ((profile && profile.petals) || 0); setMsg($("shop-msg"), "사지 못했어요. 다시 시도해 주세요.", "err"); }
     renderShop();
   }
-  async function toggleDecor(d) {
-    const decor = { ...((profile && profile.decor) || {}) }; decor[d.id] = { ...decor[d.id], shown: !decor[d.id].shown };
-    try { await saveProfile({ decor }); } catch (e) { setMsg($("shop-msg"), "바꾸지 못했어요. 다시 시도해 주세요.", "err"); }
-    renderShop();
+  // choose a spot by tapping the island (3D); without 3D the item goes to its usual spot
+  function startPlacing(id, uid) {
+    const d = DECOR.find(x => x.id === id);
+    if (g3d && g3d.place) { if ($("shop").open) $("shop").close(); g3d.place(id, uid); return; }
+    const { placed } = decorState(); addPlaced(id, spotToPolar(id, placed.filter(x => x.id === id).length));
+    setMsg($("shop-msg"), `${d.icon} ${eul(d.name)} 정원에 놓았어요.`, "ok");
+  }
+  async function addPlaced(id, pos) {
+    const { owned, placed } = decorState();
+    if (placed.filter(x => x.id === id).length >= (owned[id] || 0)) return;
+    placed.push({ uid: newUid(), id, a: pos.a, f: pos.f, rot: pos.rot || 0 });
+    await saveDecor(owned, placed);
+  }
+  async function updatePlaced(uid, patch) {
+    const { owned, placed } = decorState(), it = placed.find(x => x.uid === uid); if (!it) return;
+    Object.assign(it, patch); await saveDecor(owned, placed);
+  }
+  async function removePlaced(uid) {
+    const { owned, placed } = decorState();
+    await saveDecor(owned, placed.filter(x => x.uid !== uid));
   }
   function openShop() { setMsg($("shop-msg"), ""); renderShop(); renderWallet(); $("shop").showModal(); }
   $("wallet-chip").onclick = openShop;
@@ -1315,7 +1369,7 @@ ${entries.length ? `지금까지 ${entries.length}그루의 마음을 이 정원
     claiming = true;
     try {
       const patch = { streakClaimed: { ...claimed, [due.d]: true } };
-      if (due.decor) patch.decor = { ...((profile && profile.decor) || {}), [due.decor]: { shown: true, at: Date.now() } };
+      if (due.decor) { const st = decorState(); st.owned[due.decor] = 1; if (!st.placed.some(x => x.id === due.decor)) st.placed.push({ uid: newUid(), id: due.decor, ...spotToPolar(due.decor), rot: 0 }); patch.owned = st.owned; patch.placed = st.placed; }
       await saveProfile(patch);
       const dd = due.decor && DECOR.find(x => x.id === due.decor);
       if (due.petals) earn(due.petals, `${due.label} 선물`);
@@ -2326,8 +2380,7 @@ ${lines}
     }
 
     // ---- decorations bought with petals ----
-    const DECOR_SPOT = { pinwheel: [1.62, -0.95], startree: [3.33, -1.05], mushroom: [0.55, 0.84], cairn: [0.2, 0.86], chime: [1.3, 0.86], lamp: [1.95, 0.86], bench: [3.05, 0.84], birdhouse: [3.6, 0.86], pond: [4.65, 0.78], arch: [-0.6, 0.9] };
-    const decorObstacles = [], decorGlows = []; let decorGroup = null, decorKey = "", chimeStrip = null, pinwheel = null;
+    const decorObstacles = [], decorGlows = [], chimeStrips = [], pinwheels = []; let decorGroup = null, decorKey = "", chimeStrip = null, pinwheel = null;
     function buildDecor(id) {
       const g = new T.Group(); let r = 0.35;
       switch (id) {
@@ -2347,7 +2400,7 @@ ${lines}
           const bell = mesh(new T.SphereGeometry(0.08, 16, 10, 0, 6.29, 0, 1.9), mat("#b98a3c", { metalness: 0.6, roughness: 0.35, side: T.DoubleSide })); bell.position.y = -0.08; chimeStrip.add(bell);
           const strip = mesh(new T.BoxGeometry(0.07, 0.24, 0.005), mat("#f4f0e4")); strip.position.y = -0.28; chimeStrip.add(strip);
           const tie = mesh(new T.CylinderGeometry(0.004, 0.004, 0.12, 4), mat("#9a2c2c")); tie.position.y = -0.14; chimeStrip.add(tie);
-          g.add(chimeStrip); g.userData.chime = true; r = 0.25; break;
+          g.add(chimeStrip); chimeStrips.push(chimeStrip); g.userData.chime = true; r = 0.25; break;
         }
         case "lamp": {
           const post = mesh(new T.CylinderGeometry(0.03, 0.04, 1.3, 8), mat(BARK)); post.position.y = 0.65; g.add(post);
@@ -2393,7 +2446,7 @@ ${lines}
             const m2 = mesh(new T.ShapeGeometry(bl), mat(col, { side: T.DoubleSide })); m2.rotation.z = i * Math.PI / 2; pinwheel.add(m2);
           });
           const pin = mesh(new T.SphereGeometry(0.03, 10, 8), mat("#ffffff")); pin.position.z = 0.01; pinwheel.add(pin);
-          g.add(pinwheel); r = 0.2; break;
+          g.add(pinwheel); pinwheels.push(pinwheel); r = 0.2; break;
         }
         case "startree": {
           const trunk = mesh(new T.CylinderGeometry(0.06, 0.1, 1.2, 8), mat("#5d4a6e")); trunk.position.y = 0.6; g.add(trunk);
@@ -2423,26 +2476,80 @@ ${lines}
       }
       g.userData.r = r; return g;
     }
+    const baseYaw = (id, a) => id === "arch" ? -a + Math.PI / 2 : -a - Math.PI / 2;
     function syncDecor() {
-      const owned = (profile && profile.decor) || {}, shownIds = DECOR.map(d => d.id).filter(id => owned[id] && owned[id].shown);
-      const key = shownIds.join(",") + "|" + islandR;
+      const { placed } = decorState();
+      const key = JSON.stringify(placed) + "|" + islandR;
       if (key === decorKey) return;
       decorKey = key;
       if (decorGroup) world.remove(decorGroup);
-      decorObstacles.length = 0; decorGlows.length = 0; chimeStrip = null; pinwheel = null;
+      decorObstacles.length = 0; decorGlows.length = 0; chimeStrips.length = 0; pinwheels.length = 0;
       decorGroup = new T.Group();
-      for (const id of shownIds) {
-        const [ang, rf] = DECOR_SPOT[id], d = buildDecor(id), rad = rf < 0 ? islandR + rf : islandR * rf;
-        const x = Math.cos(ang) * rad, z = Math.sin(ang) * rad;
-        d.position.set(x, 0, z);
-        d.rotation.y = id === "arch" ? -ang + Math.PI / 2 : -ang - Math.PI / 2;
-        if (d.userData.archLegs) { const sx = -Math.sin(ang) * 0.62, sz = Math.cos(ang) * 0.62; decorObstacles.push({ x: x + sx, z: z + sz, r: 0.15 }, { x: x - sx, z: z - sz, r: 0.15 }); }
+      for (const it of placed) {
+        if (!DECOR.some(d => d.id === it.id)) continue;
+        const d = buildDecor(it.id), rad = it.f * islandR;
+        const x = Math.cos(it.a) * rad, z = Math.sin(it.a) * rad, yaw = baseYaw(it.id, it.a) + (it.rot || 0) * Math.PI / 4;
+        d.position.set(x, 0, z); d.rotation.y = yaw;
+        if (d.userData.archLegs) { const sx = Math.cos(yaw) * 0.62, sz = -Math.sin(yaw) * 0.62; decorObstacles.push({ x: x + sx, z: z + sz, r: 0.15 }, { x: x - sx, z: z - sz, r: 0.15 }); }
         else decorObstacles.push({ x, z, r: d.userData.r });
-        d.traverse(o => { o.userData.decor = id; });
+        // a generous invisible touch area, so thin things like the chime post are easy to tap
+        const tr = Math.max(0.32, d.userData.r || 0.7), touch = new T.Mesh(new T.CylinderGeometry(tr, tr, it.id === "pond" ? 0.3 : 1.5, 10), hitMat);
+        touch.position.y = it.id === "pond" ? 0.15 : 0.75; d.add(touch);
+        d.traverse(o => { o.userData.decor = it.id; o.userData.decorUid = it.uid; });
         decorGroup.add(d);
       }
       world.add(decorGroup); applySky();
+      if (selectedUid && !placed.some(x => x.uid === selectedUid)) hideDecorBar();
     }
+
+    // ---- placing and arranging decorations ----
+    let placing = null, selectedUid = null;
+    const planeY0 = new T.Plane(new T.Vector3(0, 1, 0), 0), hitPt = new T.Vector3();
+    function islandPoint(ev) {
+      const rect = renderer.domElement.getBoundingClientRect();
+      ndc.set(((ev.clientX - rect.left) / rect.width) * 2 - 1, -((ev.clientY - rect.top) / rect.height) * 2 + 1);
+      ray.setFromCamera(ndc, camera);
+      if (!ray.ray.intersectPlane(planeY0, hitPt)) return null;
+      const r = Math.hypot(hitPt.x, hitPt.z); if (r > islandR * 0.96) return null;
+      const f = Math.min(0.93, r / islandR), a = Math.atan2(hitPt.z, hitPt.x);
+      return { a, f, x: Math.cos(a) * f * islandR, z: Math.sin(a) * f * islandR };
+    }
+    function ghostOf(id) {
+      const g = buildDecor(id);
+      g.traverse(o => { if (o.material) { o.material = o.material.clone(); o.material.transparent = true; o.material.opacity = 0.55; o.material.depthWrite = false; } o.castShadow = false; o.raycast = () => {}; });
+      const ring = new T.Mesh(new T.RingGeometry(0.42, 0.5, 32), new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85, side: T.DoubleSide })); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.03; ring.raycast = () => {}; g.add(ring);
+      g.visible = false; return g;
+    }
+    function place(id, uid) {
+      if (mode !== "orbit") { showTip("섬 위로 돌아온 다음 놓을 수 있어요", true); return; }
+      endPlace(); hideDecorBar();
+      const d = DECOR.find(x => x.id === id);
+      placing = { id, uid: uid || null, ghost: ghostOf(id) }; world.add(placing.ghost);
+      controls.autoRotate = false; host.classList.add("placing");
+      $("place-text").textContent = `${d.icon} ${uid ? "옮길" : "놓을"} 자리를 눌러 주세요`;
+      $("place-bar").hidden = false; $("walk-btn").hidden = true;
+    }
+    function endPlace() {
+      if (!placing) return;
+      world.remove(placing.ghost); placing = null; host.classList.remove("placing");
+      $("place-bar").hidden = true; if (mode === "orbit") $("walk-btn").hidden = false;
+    }
+    $("place-cancel").addEventListener("click", endPlace);
+    renderer.domElement.addEventListener("pointermove", ev => {
+      if (!placing) return;
+      const pt = islandPoint(ev); placing.ghost.visible = !!pt;
+      if (pt) { placing.ghost.position.set(pt.x, 0, pt.z); placing.ghost.rotation.y = baseYaw(placing.id, pt.a); }
+    });
+    function showDecorBar(uid) {
+      const it = decorState().placed.find(x => x.uid === uid); if (!it) return;
+      const d = DECOR.find(x => x.id === it.id);
+      selectedUid = uid; $("decor-name").textContent = `${d.icon} ${d.name}`; $("decor-bar").hidden = false; $("walk-btn").hidden = true;
+    }
+    function hideDecorBar() { selectedUid = null; $("decor-bar").hidden = true; if (mode === "orbit" && !placing) $("walk-btn").hidden = false; }
+    $("decor-x").addEventListener("click", hideDecorBar);
+    $("decor-move").addEventListener("click", () => { const it = decorState().placed.find(x => x.uid === selectedUid); if (it) place(it.id, it.uid); });
+    $("decor-rot").addEventListener("click", () => { const it = decorState().placed.find(x => x.uid === selectedUid); if (it) updatePlaced(it.uid, { rot: ((it.rot || 0) + 1) % 8 }).catch(() => showTip("돌리지 못했어요. 다시 시도해 주세요.", true)); });
+    $("decor-del").addEventListener("click", () => { const it = decorState().placed.find(x => x.uid === selectedUid); if (!it) return; const d = DECOR.find(x => x.id === it.id); hideDecorBar(); removePlaced(it.uid).then(() => showTip(`${d.icon} ${eul(d.name)} 치웠어요. 상점에서 다시 놓을 수 있어요`, true), () => showTip("치우지 못했어요. 다시 시도해 주세요.", true)); });
 
     // ---- hidden clover and note for the walk ----
     let huntGroup = null, huntKey = "", huntItems = [];
@@ -2671,6 +2778,14 @@ ${lines}
       if (!down) return;
       const moved = Math.hypot(ev.clientX - down.x, ev.clientY - down.y), dt = performance.now() - down.t; down = null;
       if (moved > 8 || dt > 600) return;
+      if (placing) {
+        const pt = islandPoint(ev);
+        if (!pt) { showTip("섬 위를 눌러 주세요", true); return; }
+        const { id, uid } = placing, d = DECOR.find(x => x.id === id);
+        endPlace();
+        (uid ? updatePlaced(uid, { a: pt.a, f: pt.f }) : addPlaced(id, pt)).then(() => { Music.sfx("plant"); showTip(`${d.icon} ${eul(d.name)} ${uid ? "옮겼어요" : "놓았어요"}`, true); }, () => showTip("놓지 못했어요. 다시 시도해 주세요.", true));
+        return;
+      }
       const rect = renderer.domElement.getBoundingClientRect();
       ndc.set(((ev.clientX - rect.left) / rect.width) * 2 - 1, -((ev.clientY - rect.top) / rect.height) * 2 + 1);
       ray.setFromCamera(ndc, camera);
@@ -2684,7 +2799,13 @@ ${lines}
         c.userData.done = true; c.visible = false; foundHidden(c.userData.hunt); return;
       }
       if (hit && hit.object.userData.collect && hit.object.userData.collect.userData) { const c = hit.object.userData.collect; if (!c.userData.dying && collectPetal()) c.userData.dying = performance.now(); return; }
-      if (hit && hit.object.userData.decor) { const d = DECOR.find(x => x.id === hit.object.userData.decor); if (d.id === "chime") { Music.sfx("chime"); chimeKick = performance.now(); } showTip(`${d.icon} ${d.name}`, true); return; }
+      if (hit && hit.object.userData.decor) {
+        const d = DECOR.find(x => x.id === hit.object.userData.decor);
+        if (d.id === "chime") { Music.sfx("chime"); chimeKick = performance.now(); }
+        if (mode === "orbit" && hit.object.userData.decorUid) showDecorBar(hit.object.userData.decorUid); else showTip(`${d.icon} ${d.name}`, true);
+        return;
+      }
+      if (mode === "orbit" && selectedUid) hideDecorBar();
       if (hit && hit.object.userData.birthday) { openBirthdayCard(); return; }
       if (hit && hit.object.userData.mailbox) { if (!openMailbox()) showTip("아직 편지가 없어요. 꽃을 피우면 정원지기가 편지를 보내요"); return; }
       const id = hit && hit.object.userData.entryId;
@@ -2724,6 +2845,7 @@ ${lines}
     }
     function enterWalk() {
       if (mode !== "orbit") return;
+      endPlace(); hideDecorBar();
       orbitSaved = { pos: camera.position.clone(), quat: camera.quaternion.clone(), fov: camera.fov };
       controls.enabled = false; controls.autoRotate = false;
       const a = -0.6 + 0.32, rad = islandR * 0.88; // just beside the stepping stones
@@ -2898,8 +3020,8 @@ ${lines}
       stepFall(dt, now);
       stepCollects(dt, now);
       stepHunt(now);
-      if (pinwheel && !reduce.matches) pinwheel.rotation.z -= dt * 2.4;
-      if (chimeStrip) { const kick = chimeKick ? Math.max(0, 1 - (now - chimeKick) / 2500) : 0; chimeStrip.rotation.z = (reduce.matches ? 0 : Math.sin(now / 700) * 0.12) + Math.sin(now / 120) * 0.35 * kick; }
+      if (!reduce.matches) for (const pw of pinwheels) pw.rotation.z -= dt * 2.4;
+      if (chimeStrips.length) { const kick = chimeKick ? Math.max(0, 1 - (now - chimeKick) / 2500) : 0; chimeStrips.forEach((cs, i) => { cs.rotation.z = (reduce.matches ? 0 : Math.sin(now / 700 + i) * 0.12) + Math.sin(now / 120) * 0.35 * kick; }); }
       if (!reduce.matches) {
         for (const f of floaters) { f.position.y = f.userData.baseY + Math.sin(now / 2200 + f.userData.phase) * 0.18; f.rotation.y += dt * 0.06; }
         if (birthIslet) { birthIslet.position.y = birthIslet.userData.baseY + Math.sin(now / 2600) * 0.15; }
@@ -2913,7 +3035,7 @@ ${lines}
     }
     requestAnimationFrame(tick);
     $("garden-hint").textContent = "드래그해서 정원을 돌려 보고, 두 손가락이나 휠로 확대해요. 식물을 누르면 그날의 일기가 열려요. 오래된 식물일수록 섬 가운데에 있어요.";
-    return { update, tip: showTip, env: () => ({ sky: skyKey, season: seasonKey }) };
+    return { update, tip: showTip, place, env: () => ({ sky: skyKey, season: seasonKey }) };
   }
   let g3d = null;
   try { g3d = initGarden3D(); } catch (e) { g3d = null; $("garden3d").hidden = true; cv.hidden = false; }
