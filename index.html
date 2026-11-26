@@ -112,7 +112,7 @@
         <button type="button" class="glass eye-btn" id="eye-btn" hidden></button>
         <div class="glass hunt-chip" id="hunt-chip" hidden></div>
         <div class="gardener-bubble" id="g-bubble" hidden role="status"></div>
-        <div class="glass place-bar" id="place-bar" hidden role="status"><span id="place-text"></span><button type="button" id="place-cancel">그만두기</button></div>
+        <div class="glass place-bar" id="place-bar" hidden><span id="place-text" role="status"></span><span class="place-acts"><button type="button" id="place-rot">↻ 돌리기</button><button type="button" class="place-ok" id="place-ok">여기에 놓기</button><button type="button" id="place-cancel">그만두기</button></span></div>
         <div class="glass decor-bar" id="decor-bar" hidden>
           <span class="decor-name" id="decor-name"></span>
           <button type="button" id="decor-move">옮기기</button>
@@ -339,7 +339,7 @@
   <div class="sheet">
     <div class="panel-head"><h3>정원 꾸미기</h3><span class="seed-name" id="shop-balance"></span></div>
     <p class="hint">정원에 가끔 떨어지는 반짝이는 꽃잎을 눌러 모으세요(하루 20장까지). 씨앗을 심으면 5장, 물을 주면 1장, 꽃이 피면 6장을 더 받아요.</p>
-    <p class="hint">산 소품은 섬을 눌러 원하는 자리에 놓아요. 놓인 소품을 누르면 옮기기, 돌리기, 치우기를 할 수 있어요. 작은 소품은 5개, 큰 소품(벤치, 새집, 연못, 꽃 아치)은 3개까지 가질 수 있어요.</p>
+    <p class="hint">산 소품은 섬 위에서 손가락으로 끌어 자리를 잡고 '여기에 놓기'를 눌러요. 놓인 소품을 누르거나 여기서 '옮기기'를 누르면 옮기기, 돌리기, 치우기를 할 수 있어요. 작은 소품은 5개, 큰 소품(벤치, 새집, 연못, 꽃 아치)은 3개까지 가질 수 있어요.</p>
     <div class="shop-list" id="shop-list"></div>
     <div class="row"><button type="button" class="primary" id="shop-close">닫기</button><span class="msg" id="shop-msg" role="status"></span></div>
   </div>

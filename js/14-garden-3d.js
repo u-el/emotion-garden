@@ -290,32 +290,65 @@ function initGarden3D() {
     const ring = new T.Mesh(new T.RingGeometry(0.42, 0.5, 32), new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85, side: T.DoubleSide })); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.03; ring.raycast = () => {}; g.add(ring);
     g.visible = false; return g;
   }
+  // the camera holds still while placing, so the spot stays where the finger put it
+  function holdCamera() { controls.autoRotate = false; clearTimeout(resumeTimer); }
+  function releaseCamera() { clearTimeout(resumeTimer); resumeTimer = setTimeout(() => { if (!placing && !selectedUid) controls.autoRotate = !reduce.matches; }, 9000); }
+  function setGhost() {
+    const p = placing, rad = p.f * islandR;
+    p.ghost.position.set(Math.cos(p.a) * rad, 0, Math.sin(p.a) * rad); p.ghost.rotation.y = baseYaw(p.id, p.a) + p.rot * Math.PI / 4; p.ghost.visible = true;
+  }
+  function showOwn(uid, v) { if (decorGroup) decorGroup.children.forEach(c => { if (c.userData.decorUid === uid) c.visible = v; }); }
   function place(id, uid) {
     if (mode !== "orbit") { showTip("섬 위로 돌아온 다음 놓을 수 있어요", true); return; }
     endPlace(); hideDecorBar();
-    const d = DECOR.find(x => x.id === id);
-    placing = { id, uid: uid || null, ghost: ghostOf(id) }; world.add(placing.ghost);
-    controls.autoRotate = false; host.classList.add("placing");
-    $("place-text").textContent = `${d.icon} ${uid ? "옮길" : "놓을"} 자리를 눌러 주세요`;
+    const d = DECOR.find(x => x.id === id), { placed } = decorState(), it = uid ? placed.find(x => x.uid === uid) : null;
+    // start where it already stands, or at its usual spot
+    const start = it ? { a: it.a, f: it.f, rot: it.rot || 0 } : { ...spotToPolar(id, placed.filter(x => x.id === id).length), rot: 0 };
+    placing = { id, uid: uid || null, ghost: ghostOf(id), a: start.a, f: start.f, rot: start.rot, drag: false }; world.add(placing.ghost); setGhost();
+    if (uid) showOwn(uid, false);
+    holdCamera(); controls.enabled = false; host.classList.add("placing");
+    $("place-text").textContent = `${d.icon} ${d.name} · 끌어서 자리를 잡아요`;
     $("place-bar").hidden = false; $("walk-btn").hidden = true;
   }
   function endPlace() {
     if (!placing) return;
+    if (placing.uid) showOwn(placing.uid, true);
     world.remove(placing.ghost); placing = null; host.classList.remove("placing");
+    controls.enabled = mode === "orbit"; releaseCamera();
     $("place-bar").hidden = true; if (mode === "orbit") $("walk-btn").hidden = false;
   }
-  $("place-cancel").addEventListener("click", endPlace);
-  renderer.domElement.addEventListener("pointermove", ev => {
+  function commitPlace() {
     if (!placing) return;
-    const pt = islandPoint(ev); placing.ghost.visible = !!pt;
-    if (pt) { placing.ghost.position.set(pt.x, 0, pt.z); placing.ghost.rotation.y = baseYaw(placing.id, pt.a); }
-  });
+    const { id, uid, a, f, rot } = placing, d = DECOR.find(x => x.id === id);
+    endPlace();
+    (uid ? updatePlaced(uid, { a, f, rot }) : addPlaced(id, { a, f, rot })).then(() => {
+      Music.sfx("plant"); showTip(uid ? `${d.icon} ${eul(d.name)} 옮겼어요` : `${d.icon} ${eul(d.name)} 놓았어요. 소품을 누르면 다시 옮기거나 돌릴 수 있어요`, true);
+    }, () => showTip("놓지 못했어요. 다시 시도해 주세요.", true));
+  }
+  $("place-cancel").addEventListener("click", endPlace);
+  $("place-ok").addEventListener("click", commitPlace);
+  $("place-rot").addEventListener("click", () => { if (placing) { placing.rot = (placing.rot + 1) % 8; setGhost(); } });
+  function dragTo(ev) { const pt = islandPoint(ev); if (pt) { placing.a = pt.a; placing.f = pt.f; setGhost(); } }
+  renderer.domElement.addEventListener("pointerdown", ev => { if (!placing) return; placing.drag = true; dragTo(ev); });
+  renderer.domElement.addEventListener("pointermove", ev => { if (placing && (placing.drag || ev.pointerType === "mouse")) dragTo(ev); });
+  window.addEventListener("pointerup", () => { if (placing) placing.drag = false; });
+  // a soft ring under the decoration you tapped, so you can see which one the buttons change
+  const selRing = new T.Mesh(new T.RingGeometry(0.55, 0.66, 40), new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9, side: T.DoubleSide, depthWrite: false }));
+  selRing.rotation.x = -Math.PI / 2; selRing.position.y = 0.04; selRing.visible = false; selRing.raycast = () => {}; world.add(selRing);
   function showDecorBar(uid) {
     const it = decorState().placed.find(x => x.uid === uid); if (!it) return;
     const d = DECOR.find(x => x.id === it.id);
     selectedUid = uid; $("decor-name").textContent = `${d.icon} ${d.name}`; $("decor-bar").hidden = false; $("walk-btn").hidden = true;
+    const rad = it.f * islandR, own = decorGroup && decorGroup.children.find(c => c.userData.decorUid === uid), sc = Math.max(0.8, ((own && own.userData.r) || 0.6) / 0.6); selRing.position.set(Math.cos(it.a) * rad, 0.04, Math.sin(it.a) * rad); selRing.scale.setScalar(sc); selRing.visible = true;
+    holdCamera();
   }
-  function hideDecorBar() { selectedUid = null; $("decor-bar").hidden = true; if (mode === "orbit" && !placing) $("walk-btn").hidden = false; }
+  function hideDecorBar() { const was = selectedUid; selectedUid = null; selRing.visible = false; $("decor-bar").hidden = true; if (mode === "orbit" && !placing) $("walk-btn").hidden = false; if (was) releaseCamera(); }
+  // from the shop: move one you already placed (if there are several, tap the one to move)
+  function moveFromShop(id) {
+    const mine = decorState().placed.filter(x => x.id === id), d = DECOR.find(x => x.id === id);
+    if (mine.length === 1) { place(id, mine[0].uid); return; }
+    holdCamera(); showTip(`${d.icon} 옮길 ${eul(d.name)} 섬에서 눌러 주세요`, true);
+  }
   $("decor-x").addEventListener("click", hideDecorBar);
   $("decor-move").addEventListener("click", () => { const it = decorState().placed.find(x => x.uid === selectedUid); if (it) place(it.id, it.uid); });
   $("decor-rot").addEventListener("click", () => { const it = decorState().placed.find(x => x.uid === selectedUid); if (it) updatePlaced(it.uid, { rot: ((it.rot || 0) + 1) % 8 }).catch(() => showTip("돌리지 못했어요. 다시 시도해 주세요.", true)); });
@@ -848,14 +881,7 @@ function initGarden3D() {
     if (!down) return;
     const moved = Math.hypot(ev.clientX - down.x, ev.clientY - down.y), dt = performance.now() - down.t; down = null;
     if (moved > 8 || dt > 600) return;
-    if (placing) {
-      const pt = islandPoint(ev);
-      if (!pt) { showTip("섬 위를 눌러 주세요", true); return; }
-      const { id, uid } = placing, d = DECOR.find(x => x.id === id);
-      endPlace();
-      (uid ? updatePlaced(uid, { a: pt.a, f: pt.f }) : addPlaced(id, pt)).then(() => { Music.sfx("plant"); showTip(`${d.icon} ${eul(d.name)} ${uid ? "옮겼어요" : "놓았어요"}`, true); }, () => showTip("놓지 못했어요. 다시 시도해 주세요.", true));
-      return;
-    }
+    if (placing) { if (!islandPoint(ev)) showTip("섬 위로 끌어 주세요", true); return; }
     const rect = renderer.domElement.getBoundingClientRect();
     ndc.set(((ev.clientX - rect.left) / rect.width) * 2 - 1, -((ev.clientY - rect.top) / rect.height) * 2 + 1);
     ray.setFromCamera(ndc, camera);
@@ -1136,7 +1162,7 @@ function initGarden3D() {
   requestAnimationFrame(tick);
   $("garden-hint").textContent = "드래그해서 정원을 돌려 보고, 두 손가락이나 휠로 확대해요. 식물을 누르면 그날의 일기가 열려요. 오래된 식물일수록 섬 가운데에 있어요.";
   syncLiteBtn(); if (lite) rain.count = Math.floor(RAIN_N / 3);
-  return { update, tip: showTip, place, setLite: v => setLite(v), lite: () => lite, weather, snapshot, env: () => ({ sky: skyKey, season: seasonKey, weather: weatherKey }) };
+  return { update, tip: showTip, place, moveFromShop, setLite: v => setLite(v), lite: () => lite, weather, snapshot, env: () => ({ sky: skyKey, season: seasonKey, weather: weatherKey }) };
 }
 let g3d = null;
 try { g3d = initGarden3D(); } catch (e) { g3d = null; $("garden3d").hidden = true; cv.hidden = false; }

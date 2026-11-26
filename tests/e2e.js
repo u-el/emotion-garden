@@ -48,8 +48,22 @@ fs.writeFileSync(FIXTURE, JSON.stringify({ entries: titles.map((t, i) => ({ id: 
   const rows = await p.$$('#shop-list .shop-item'); await (await rows[0].$('button.primary')).click(); await p.waitForTimeout(300);
   const sp = await p.evaluate(() => { const d = window.__dbg, R = d.R(); const v = new d.camera.position.constructor(Math.cos(0.4) * 0.5 * R, 0, Math.sin(0.4) * 0.5 * R).project(d.camera); const r = d.renderer.domElement.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; });
   const before = await p.evaluate(() => window.__dbg.decor().children.length);
-  await p.mouse.click(sp[0], sp[1]); await p.waitForTimeout(500);
-  ok('buy + place decoration', await p.evaluate(() => window.__dbg.decor().children.length) === before + 1);
+  const cam0 = await p.evaluate(() => window.__dbg.camera.position.toArray().join());
+  // drag on the island: the ghost follows, the camera holds still, nothing is placed until '여기에 놓기'
+  await p.mouse.move(sp[0] - 60, sp[1] - 30); await p.mouse.down(); await p.mouse.move(sp[0], sp[1], { steps: 6 }); await p.mouse.up(); await p.waitForTimeout(300);
+  const cam1 = await p.evaluate(() => window.__dbg.camera.position.toArray().join());
+  const held = cam0.split(',').every((v, i) => Math.abs(v - cam1.split(',')[i]) < 0.05) && await p.evaluate(() => window.__dbg.decor().children.length) === before;
+  await p.click('#place-rot'); await p.click('#place-ok'); await p.waitForTimeout(500);
+  const last = await p.evaluate(() => decorState().placed.at(-1));
+  ok('buy + place decoration', held && await p.evaluate(() => window.__dbg.decor().children.length) === before + 1 && Math.abs(last.a - 0.4) < 0.08 && Math.abs(last.f - 0.5) < 0.06 && last.rot === 1, JSON.stringify(last));
+  // move it: tap it, '옮기기', drag somewhere else, '여기에 놓기'
+  await p.mouse.click(sp[0], sp[1] - 8); await p.waitForTimeout(300);
+  const barShown = await p.evaluate(() => !document.getElementById('decor-bar').hidden);
+  await p.click('#decor-move'); await p.waitForTimeout(200);
+  const sp2 = await p.evaluate(() => { const d = window.__dbg, R = d.R(); const v = new d.camera.position.constructor(Math.cos(1.2) * 0.3 * R, 0, Math.sin(1.2) * 0.3 * R).project(d.camera); const r = d.renderer.domElement.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; });
+  await p.mouse.move(sp2[0], sp2[1]); await p.mouse.down(); await p.mouse.up(); await p.click('#place-ok'); await p.waitForTimeout(500);
+  const moved = await p.evaluate(uid => decorState().placed.find(x => x.uid === uid), last.uid);
+  ok('move decoration', barShown && moved && Math.abs(moved.a - 1.2) < 0.1 && Math.abs(moved.f - 0.3) < 0.06 && moved.rot === 1, JSON.stringify(moved));
   for (const t of ['밤', '낮']) { for (let i = 0; i < 4; i++) { if ((await p.getAttribute('#time-btn', 'aria-label')).includes(t)) break; await p.click('#time-btn'); } }
   await p.click('#season-btn'); await p.click('#music-btn'); await p.waitForTimeout(800); ok('music on', (await p.textContent('#music-btn')).includes('끄기')); await p.click('#music-btn');
   await p.click('#walk-btn'); await p.waitForTimeout(2300);

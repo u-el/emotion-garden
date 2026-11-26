@@ -79,6 +79,7 @@ function renderShop() {
       b.onclick = () => buyDecor(d); acts.append(b);
     }
     if (free > 0) { const b = document.createElement("button"); b.type = "button"; b.className = "ghost"; b.textContent = "놓기"; b.onclick = () => startPlacing(d.id); acts.append(b); }
+    if (out > 0 && g3d && g3d.moveFromShop) { const b = document.createElement("button"); b.type = "button"; b.className = "ghost"; b.textContent = "옮기기"; b.setAttribute("aria-label", `놓아 둔 ${d.name} 옮기기`); b.onclick = () => { $("shop").close(); g3d.moveFromShop(d.id); }; acts.append(b); }
     row.append(ic, tx, acts); box.append(row);
   }
 }
@@ -96,7 +97,7 @@ async function buyDecor(d) {
   } catch (e) { petalBuffer = total - ((profile && profile.petals) || 0); setMsg($("shop-msg"), "사지 못했어요. 다시 시도해 주세요.", "err"); }
   renderShop();
 }
-// choose a spot by tapping the island (3D); without 3D the item goes to its usual spot
+// choose a spot by dragging on the island (3D); without 3D the item goes to its usual spot
 function startPlacing(id, uid) {
   const d = DECOR.find(x => x.id === id);
   if (g3d && g3d.place) { if ($("shop").open) $("shop").close(); g3d.place(id, uid); return; }

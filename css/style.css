@@ -129,7 +129,12 @@ canvas { display: block; width: 100%; cursor: pointer; touch-action: manipulatio
 .decor-bar .decor-x { border: none; background: transparent; padding: 5px 8px; }
 .decor-name { font-weight: 600; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; }
 #garden3d.full .place-bar, #garden3d.full .decor-bar { bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
-#garden3d.placing canvas { cursor: crosshair; }
+#garden3d.placing canvas { cursor: grab; }
+.place-bar { flex-wrap: wrap; justify-content: center; border-radius: 18px; padding: 8px 10px; white-space: normal; text-align: center; gap: 6px 8px; }
+.place-bar #place-text { width: 100%; font-size: 0.85rem; }
+.place-acts { display: flex; gap: 6px; flex-wrap: nowrap; }
+.place-acts button { white-space: nowrap; }
+.place-bar .place-ok { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
 .full-water { left: 12px; bottom: 14px; padding: 8px 14px; font-weight: 600; color: #1d5fa8; }
 #garden3d.full { position: fixed; inset: 0; z-index: 50; height: 100%; min-height: 0; }
 #garden3d.full .time-chip { right: calc(12px + env(safe-area-inset-right, 0px)); margin-top: env(safe-area-inset-top, 0px); }
