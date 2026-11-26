@@ -214,7 +214,12 @@ dialog::backdrop { background: rgba(10, 16, 14, 0.45); }
 select { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; }
 .week-nav { display: flex; align-items: center; gap: 8px; }
 .photo-chip { top: 212px; }
-.weather-chip { font-size: 0.85rem; color: var(--muted); padding: 4px 10px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); }
+.garden-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+@media (min-width: 560px) { .garden-actions { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.garden-actions button { height: 44px; padding: 0 10px; font-size: 0.92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; justify-content: center; gap: 4px; }
+.garden-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; min-height: 1.2em; }
+.garden-meta:has(> [hidden]:first-child):has(> [hidden]:last-child) { display: none; }
+.weather-chip { font-size: 0.88rem; color: var(--muted); }
 #photo-dlg .sheet { position: relative; }
 #photo-dlg .panel-head, #export-dlg .panel-head { position: relative; padding-right: 40px; }
 #photo-dlg .sheet-x, #export-dlg .sheet-x { top: -6px; right: -6px; }
@@ -380,15 +385,17 @@ mark { background: color-mix(in srgb, var(--accent) 22%, transparent); color: in
       <h2 id="garden-title">나의 정원</h2>
       <span class="stat" id="garden-stat"></span>
     </div>
-    <div class="row">
-      <button type="button" class="water" id="water-all">오늘 물 주기</button>
+    <div class="garden-actions">
+      <button type="button" class="water" id="water-all">💧 물 주기</button>
       <button type="button" class="ghost" id="decor-btn">🪴 정원 꾸미기</button>
       <button type="button" class="ghost" id="photo-btn">📷 정원 사진</button>
-      <span class="weather-chip" id="weather-chip" hidden></span>
       <button type="button" class="ghost" id="music-btn" aria-pressed="false">🎵 음악 켜기</button>
-      <label class="vol" id="music-vol-wrap" hidden><span class="label">소리</span><input type="range" id="music-vol" min="0" max="100" value="60" aria-label="음악 소리 크기"></label>
-      <span class="msg" id="garden-msg" role="status"></span>
     </div>
+    <div class="garden-meta">
+      <span class="weather-chip" id="weather-chip" hidden></span>
+      <label class="vol" id="music-vol-wrap" hidden><span class="label">소리</span><input type="range" id="music-vol" min="0" max="100" value="60" aria-label="음악 소리 크기"></label>
+    </div>
+    <span class="msg" id="garden-msg" role="status"></span>
     <p class="example-note" id="example-note" hidden>아래는 예시 정원이에요. 첫 씨앗을 심으면 내 정원으로 바뀌어요.</p>
     <div class="canvas-box">
       <div id="garden3d" hidden aria-label="미니어처 감정 정원. 드래그해서 돌려 보고, 식물을 누르면 그날의 일기가 열려요.">
@@ -3634,7 +3641,7 @@ ${lines}
     const thirsty = entries.filter(needsWater).length;
     const wb = $("water-all");
     wb.disabled = thirsty === 0;
-    wb.textContent = thirsty ? `오늘 물 주기 · ${thirsty}그루` : own ? "오늘 돌봄 완료" : "오늘 물 주기";
+    wb.textContent = thirsty ? `💧 물 주기 · ${thirsty}그루` : own ? "💧 돌봄 완료" : "💧 물 주기";
     const seen = new Set(entries.flatMap(e => e.emotions.map(x => x.n)));
     $("guide-stat").textContent = `${TRACKED.length}종 중 ${TRACKED.filter(n => seen.has(n)).length}종 만남`;
     const guide = $("guide"); guide.textContent = "";
