@@ -649,30 +649,38 @@ mark { background: color-mix(in srgb, var(--accent) 22%, transparent); color: in
 (() => {
   // ---------- Emotion catalogue (01~39: 감정산책 목록, 40~51: 감정정원에서 더한 감정, 52: 미확인) ----------
   const FAMILIES = {
+    sunflower: ["해바라기", "환하게 웃는 마음"],
+    camellia:  ["동백꽃", "아끼고 고마운 마음"],
     daisy:  ["둥근꽃", "따뜻하게 차오르는 마음"],
+    starflower: ["별빛꽃", "반짝이며 놀라는 마음"],
     tulip:  ["꽃봉오리", "앞을 바라보는 마음"],
-    bell:   ["초롱꽃", "고개 숙인 마음"],
-    fern:   ["고사리", "흔들리는 마음"],
-    thorn:  ["가시풀", "날이 선 마음"],
+    dandelion: ["민들레", "가볍게 날아오르는 마음"],
+    lotus:  ["연꽃", "잔잔하게 가라앉은 마음"],
     moss:   ["이끼돌", "가라앉은 고요"],
+    hydrangea: ["수국", "누군가를, 그때를 그리는 마음"],
+    bell:   ["초롱꽃", "고개 숙인 마음"],
+    lavender: ["라벤더", "조마조마한 마음"],
+    fern:   ["고사리", "흔들리는 마음"],
+    wildrose: ["들장미", "누군가를 바라보는 마음"],
+    thorn:  ["가시풀", "날이 선 마음"],
     willow: ["버들풀", "기운이 빠진 마음"],
     vine:   ["덩굴꽃", "관계 속에서 생긴 마음"],
     sprout: ["새싹", "아직 이름 없는 마음"],
   };
   const E = {
-    1:["기쁨","daisy","#f2c230"], 2:["외로움","bell","#4f6db3"], 3:["불안","fern","#5f9a92"], 4:["설렘","tulip","#f29bb5"],
-    5:["만족","daisy","#f0a860"], 6:["공허","willow","#a3a9ad"], 7:["지침","willow","#c4b08c"], 8:["감사","daisy","#ec8a3c"],
+    1:["기쁨","sunflower","#f2c230"], 2:["외로움","hydrangea","#4f6db3"], 3:["불안","lavender","#5f9a92"], 4:["설렘","tulip","#f29bb5"],
+    5:["만족","daisy","#f0a860"], 6:["공허","willow","#a3a9ad"], 7:["지침","willow","#c4b08c"], 8:["감사","camellia","#ec8a3c"],
     9:["슬픔","bell","#5b8fd6"], 10:["무기력","willow","#9a9182"], 11:["분노","thorn","#d6453a"], 12:["짜증","thorn","#e67a3a"],
-    13:["평온","moss","#8fb58a"], 14:["후회","bell","#7c8ea8"], 15:["그리움","bell","#a68fd1"], 16:["번아웃","willow","#8a7f78"],
-    17:["난처함","fern","#c7ad6f"], 18:["초조","fern","#9aa84a"], 19:["혼란","fern","#9b8bb0"], 20:["질투","thorn","#4f9a4a"],
-    21:["부러움","thorn","#a6c24a"], 22:["향수","bell","#c3a6dd"], 23:["연민","bell","#7fb6d9"], 24:["자존감","tulip","#e0a63a"],
-    25:["감탄","tulip","#f0c95a"], 26:["경외","tulip","#6c5fc0"], 27:["수치심","bell","#c06a8f"], 28:["죄책감","bell","#8b5a5a"],
-    29:["기대","tulip","#f4a98a"], 30:["희망","tulip","#b8d45a"], 31:["신뢰","moss","#6f9d78"], 32:["혐오","thorn","#7e8a3c"],
-    33:["공감적 고통","bell","#6a73c4"], 34:["안도감","moss","#7cc2a6"], 35:["지루함","willow","#b9b4a8"], 36:["호기심","tulip","#3fb3b0"],
-    37:["감격","daisy","#ef6f6a"], 38:["사랑","daisy","#ea5f8f"], 39:["황홀","daisy","#c85bd0"], 
+    13:["평온","lotus","#8fb58a"], 14:["후회","bell","#7c8ea8"], 15:["그리움","hydrangea","#a68fd1"], 16:["번아웃","willow","#8a7f78"],
+    17:["난처함","fern","#c7ad6f"], 18:["초조","lavender","#9aa84a"], 19:["혼란","fern","#9b8bb0"], 20:["질투","wildrose","#4f9a4a"],
+    21:["부러움","wildrose","#a6c24a"], 22:["향수","hydrangea","#c3a6dd"], 23:["연민","bell","#7fb6d9"], 24:["자존감","tulip","#e0a63a"],
+    25:["감탄","starflower","#f0c95a"], 26:["경외","lotus","#6c5fc0"], 27:["수치심","bell","#c06a8f"], 28:["죄책감","bell","#8b5a5a"],
+    29:["기대","dandelion","#f4a98a"], 30:["희망","dandelion","#b8d45a"], 31:["신뢰","moss","#6f9d78"], 32:["혐오","thorn","#7e8a3c"],
+    33:["공감적 고통","bell","#6a73c4"], 34:["안도감","lotus","#7cc2a6"], 35:["지루함","willow","#b9b4a8"], 36:["호기심","starflower","#3fb3b0"],
+    37:["감격","sunflower","#ef6f6a"], 38:["사랑","camellia","#ea5f8f"], 39:["황홀","starflower","#c85bd0"], 
     40:["놀람","fern","#f4d35e"], 41:["두려움","fern","#4a5a7a"], 42:["실망","vine","#8aa1b8"], 43:["서운함","vine","#d58fa6"],
     44:["억울함","thorn","#b8433d"], 45:["답답함","thorn","#a8744a"], 46:["아쉬움","vine","#c9a0c8"], 47:["미안함","vine","#e3a587"],
-    48:["뿌듯함","daisy","#f2a93b"], 49:["즐거움","daisy","#ff8c69"], 50:["홀가분함","moss","#a8dcd1"], 51:["막막함","willow","#7d8590"],
+    48:["뿌듯함","daisy","#f2a93b"], 49:["즐거움","sunflower","#ff8c69"], 50:["홀가분함","dandelion","#a8dcd1"], 51:["막막함","willow","#7d8590"],
     52:["미확인","sprout","#d9e0d4"],
   };
   const NAME_TO_NUM = Object.fromEntries(Object.entries(E).map(([n, v]) => [v[0].replace(/\s/g, ""), +n]));
@@ -773,6 +781,7 @@ mark { background: color-mix(in srgb, var(--accent) 22%, transparent); color: in
       };
       if (Array.isArray(raw.waterDays)) entry.waterDays = raw.waterDays.map(String).slice(0, 4);
       if (raw.fast) entry.fast = true;
+      if (raw.rare === "gold" || raw.rare === "rainbow") entry.rare = raw.rare;
       if (raw.question) entry.question = String(raw.question).slice(0, 200);
       if (raw.letter && typeof raw.letter.text === "string") entry.letter = { text: raw.letter.text.slice(0, 2000), at: Number(raw.letter.at) || Date.now(), read: !!raw.letter.read, ai: !!raw.letter.ai };
       try { await (store || localStore).add(entry); added++; } catch (e) { skipped++; }
@@ -927,7 +936,7 @@ ${text}
     if (!draft.emotions.length) { setMsg(msg, "감정을 하나 이상 골라 주세요.", "err"); renderPicker(true); return; }
     const first = entries.length === 0, plantedToday = entries.filter(x => x.date === today()).length;
     const entry = {
-      id: newId(), v: 2, date: today(), createdAt: Date.now(), waterDays: [today()], ...(first ? { fast: true } : {}),
+      id: newId(), v: 2, date: today(), createdAt: Date.now(), waterDays: [today()], ...(first ? { fast: true } : {}), ...rollRare(draft.emotions[0].s),
       emotions: draft.emotions.map(x => ({ n: x.n, s: x.s })),
       title: ($("r-title").value.trim() || E[draft.emotions[0].n][0] + "의 하루").slice(0, 40),
       diary: $("r-diary").value.trim(), note: draft.note, original: draft.original, ...(draft.question ? { question: draft.question } : {}),
@@ -941,13 +950,19 @@ ${text}
     $("garden-title").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
   });
 
+  // ---------- Rare flowers ----------
+  // decided quietly when the seed is planted, revealed when it blooms
+  function rollRare(s) { const r = Math.random(); if (r < 0.015) return { rare: "rainbow" }; if (r < (s >= 5 ? 0.3 : 0.04) + 0.015) return { rare: "gold" }; return {}; }
+  const rareName = e => e.rare === "gold" ? "금빛 " : e.rare === "rainbow" ? "무지개 " : "";
+  const bloomName = e => `${E[e.emotions[0].n][0]}의 ${stageOf(e) === 3 ? rareName(e) : ""}${FAMILIES[E[e.emotions[0].n][1]][0]}`;
+
   // ---------- Watering ----------
   async function water(e) {
     const days = [...(e.waterDays || []), today()];
     await (store || localStore).update(e.id, { waterDays: days });
     const st = stageOf({ ...e, waterDays: days });
     Music.sfx(st === 3 ? "bloom" : "water");
-    if (!e.example) earn(st === 3 ? 6 : 1, st === 3 ? "꽃이 피었어요" : "");
+    if (!e.example) earn(st === 3 ? (e.rare ? 11 : 6) : 1, st === 3 ? (e.rare ? `${e.rare === "gold" ? "✨" : "🌈"} 희귀한 ${rareName(e)}꽃이 피었어요!` : "꽃이 피었어요") : "");
     if (st === 3) deliverLetter({ ...e, waterDays: days });
     return st;
   }
@@ -1015,8 +1030,8 @@ ${care}번의 물을 주며 돌봐준 덕분에 오늘 꽃이 되었어요.
   function openLetter(e) {
     letterId = e.id;
     $("letter-meta").textContent = `${md(ymd(new Date(e.letter.at)))}에 도착한 편지`;
-    $("letter-title").textContent = `${iga(plantName(e.emotions[0].n))} 피었어요`;
-    $("letter-stamp").textContent = { daisy: "🌼", tulip: "🌷", bell: "🔔", fern: "🌿", thorn: "🌵", moss: "🪨", willow: "🍃", vine: "🌺", sprout: "🌱" }[E[e.emotions[0].n][1]] || "🌸";
+    $("letter-title").textContent = `${iga(bloomName(e))} 피었어요`;
+    $("letter-stamp").textContent = e.rare ? (e.rare === "gold" ? "🌟" : "🌈") : (STAMP[E[e.emotions[0].n][1]] || "🌸");
     $("letter-body").textContent = e.letter.text; $("letter-diary").hidden = false;
     if ($("sheet").open) $("sheet").close();
     $("letter").showModal();
@@ -1465,7 +1480,7 @@ ${entries.length ? `지금까지 ${entries.length}그루의 마음을 이 정원
   }, 2500);
 
   // ---------- Mood weather: the last few days of feelings become the garden's weather ----------
-  const VALENCE = { daisy: 1, tulip: 0.8, moss: 0.6, sprout: 0, fern: -0.6, thorn: -0.7, vine: -0.7, bell: -1, willow: -0.9 };
+  const VALENCE = { daisy: 1, sunflower: 1, camellia: 0.9, starflower: 0.9, tulip: 0.8, dandelion: 0.8, lotus: 0.7, moss: 0.6, sprout: 0, fern: -0.6, lavender: -0.6, thorn: -0.7, wildrose: -0.6, vine: -0.7, hydrangea: -0.8, bell: -1, willow: -0.9 };
   function moodScore(fromDay, toDay) {
     let sum = 0, w = 0;
     for (const e of entries) {
@@ -1514,6 +1529,10 @@ ${entries.length ? `지금까지 ${entries.length}그루의 마음을 이 정원
     thorn: "날이 선 마음이 있었네요. 그럴 만한 이유가 있었을 거예요.", moss: "고요한 마음이 느껴져요. 이 평온이 오래 머물기를.",
     willow: "기운이 많이 빠진 하루였네요. 오늘은 푹 쉬어도 괜찮아요.", vine: "관계 속에서 마음이 많이 쓰였네요. 그 마음도 소중해요.",
     sprout: "아직 이름 붙이기 어려운 마음이네요. 그대로 심어 두어도 괜찮아요.",
+    sunflower: "환하게 웃은 하루였네요. 그 빛이 오래 머물기를.", camellia: "아끼고 고마운 마음이 느껴져요. 그 마음을 전해 보는 건 어때요?",
+    starflower: "반짝이는 순간을 만났네요. 그 설렘을 기억해요.", dandelion: "마음이 한결 가벼워졌네요. 가볍게 날아올라요.",
+    lotus: "잔잔한 마음이 느껴져요. 이 고요가 오래 머물기를.", hydrangea: "누군가를, 그때를 그리는 마음이네요. 그리움도 사랑의 다른 모양이에요.",
+    lavender: "조마조마한 마음이 있었네요. 천천히 숨을 고르며 지금 여기에 머물러요.", wildrose: "누군가를 바라보는 마음이 있었네요. 당신만의 꽃도 이미 피고 있어요.",
   };
   function readByWords(text) {
     const t = text.replace(/\s+/g, " "), strong = /(너무|정말|진짜|엄청|완전|많이|아주|무척)/g;
@@ -1647,14 +1666,14 @@ ${entries.length ? `지금까지 ${entries.length}그루의 마음을 이 정원
 
   // ---------- Weekly walk map ----------
   const MOODS = [
-    { key: "bright", name: "밝음", fams: ["daisy", "tulip"], color: "#f0b53c" },
-    { key: "calm", name: "고요", fams: ["moss"], color: "#7cc2a6" },
-    { key: "wave", name: "출렁임", fams: ["fern", "thorn"], color: "#d9704a" },
-    { key: "low", name: "가라앉음", fams: ["bell", "willow", "vine"], color: "#6a7fc4" },
+    { key: "bright", name: "밝음", fams: ["daisy", "tulip", "sunflower", "camellia", "dandelion", "starflower"], color: "#f0b53c" },
+    { key: "calm", name: "고요", fams: ["moss", "lotus"], color: "#7cc2a6" },
+    { key: "wave", name: "출렁임", fams: ["fern", "thorn", "lavender", "wildrose"], color: "#d9704a" },
+    { key: "low", name: "가라앉음", fams: ["bell", "willow", "vine", "hydrangea"], color: "#6a7fc4" },
     { key: "unknown", name: "아직 모름", fams: ["sprout"], color: "#b9c2b6" },
   ];
   const DAYS = ["월", "화", "수", "목", "금", "토", "일"];
-  const STAMP = { daisy: "🌼", tulip: "🌷", bell: "🔔", fern: "🌿", thorn: "🌵", moss: "🪨", willow: "🍃", vine: "🌺", sprout: "🌱" };
+  const STAMP = { daisy: "🌼", tulip: "🌷", bell: "🔔", fern: "🌿", thorn: "🌵", moss: "🪨", willow: "🍃", vine: "🪴", sprout: "🌱", sunflower: "🌻", camellia: "🌺", hydrangea: "💠", lotus: "🪷", dandelion: "🌾", lavender: "💜", wildrose: "🌹", starflower: "✨" };
   let weekOffset = 0;
   function weekStartOf(d) { const x = new Date(d); x.setHours(12, 0, 0, 0); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; }
   function weekDays(offset) { const s = weekStartOf(new Date()); s.setDate(s.getDate() + offset * 7); return Array.from({ length: 7 }, (_, i) => { const d = new Date(s); d.setDate(s.getDate() + i); return ymd(d); }); }
@@ -1931,7 +1950,7 @@ ${lines}
     const h = p.h, c = p.color, a = p.accent || "rgba(255,255,255,0.75)";
     ctx.save(); ctx.translate(p.x, p.base); ctx.rotate(sway);
     if (p.stage < 3) { drawYoung(p); ctx.restore(); return; }
-    switch (p.fam) {
+    switch ({ sunflower: "daisy", camellia: "daisy", starflower: "daisy", dandelion: "tulip", lotus: "moss", hydrangea: "bell", lavender: "fern", wildrose: "thorn" }[p.fam] || p.fam) {
       case "daisy": {
         stem(h, 6); leaf(-h * 0.35, -1, 10); leaf(-h * 0.55, 1, 9);
         const r = 7 + p.s * 1.6; ctx.translate(0, -h); ctx.fillStyle = c;
@@ -2125,7 +2144,7 @@ ${lines}
     const mat = (c, opts) => {
       const key = c + JSON.stringify(opts || {});
       if (!opts && SPECIAL[c]) return SPECIAL[c];
-      if (!matCache.has(key)) matCache.set(key, new T.MeshStandardMaterial(Object.assign({ color: lin(c), roughness: 0.78, flatShading: c === SOIL_DARK }, opts || {})));
+      if (!matCache.has(key)) { const m0 = new T.MeshStandardMaterial(Object.assign({ color: lin(c), roughness: 0.78, flatShading: c === SOIL_DARK }, opts || {})); m0.userData.hex = c; matCache.set(key, m0); }
       return matCache.get(key);
     };
     const mesh = (geo, m, shadow = true) => { const o = new T.Mesh(geo, m); o.castShadow = shadow; o.receiveShadow = true; return o; };
@@ -2433,6 +2452,87 @@ ${lines}
             top = h + 0.2;
             break;
           }
+          case "sunflower": {
+            const h = 1.9 * k; g.add(stemTube(h, 0.12, 0.045).m);
+            for (const [y, a, sz] of [[0.3, 0.5, 0.7], [0.5, 3.4, 0.65], [0.7, 1.9, 0.55]]) addLeaf(g, h * y, a, sz);
+            const hd = new T.Group(); hd.position.y = h; hd.rotation.x = 0.95; g.add(hd);
+            const disk = mesh(new T.CylinderGeometry(0.15 * k, 0.15 * k, 0.05, 28), mat("#5a3a1e")); hd.add(disk);
+            for (let i = 0; i < 40; i++) { const a = i * 2.39996, rr = Math.sqrt(i / 40) * 0.13 * k; const sd = mesh(new T.SphereGeometry(0.012, 6, 4), mat(acc || "#3a2412")); sd.position.set(Math.cos(a) * rr, 0.03, Math.sin(a) * rr); hd.add(sd); }
+            petalRing(hd, 18, 0.13 * k, 0.04 * k, c, 0.12, 0, 0, 0.02); petalRing(hd, 18, 0.12 * k, 0.038 * k, c, 0.3, -0.01, 0.17, 0.02);
+            top = h + 0.25; break;
+          }
+          case "camellia": {
+            const h = 0.9 * k; g.add(stemTube(h, 0.05, 0.04).m);
+            const glossy = mat("#2f5d3a", { roughness: 0.35 });
+            for (let i = 0; i < 9; i++) { const lf = mesh(new T.SphereGeometry(1, 14, 8), glossy); lf.scale.set(0.16, 0.03, 0.08); const a = i * 2.1, y = h * (0.45 + (i % 4) * 0.15); lf.position.set(Math.cos(a) * 0.13, y, Math.sin(a) * 0.13); lf.rotation.set(0.3, -a, 0.35); g.add(lf); }
+            const spots = [[0, h + 0.05, 0], [0.16, h * 0.8, 0.08], [-0.14, h * 0.7, -0.06]].slice(0, 1 + Math.ceil(main.s / 2));
+            spots.forEach(([x, y, z], i) => { const hd = new T.Group(); hd.position.set(x, y, z); hd.rotation.set(-0.3 + i * 0.4, i, 0); g.add(hd);
+              petalRing(hd, 6, 0.1 * k, 0.07 * k, c, 0.5, 0, 0, 0.025); petalRing(hd, 5, 0.075 * k, 0.055 * k, i === 0 && acc ? acc : c, 0.95, 0.015, 0.5, 0.025);
+              for (let j = 0; j < 7; j++) { const st = mesh(new T.CylinderGeometry(0.004, 0.004, 0.05, 4), mat("#f6d36a")); const a = j / 7 * 6.283; st.position.set(Math.cos(a) * 0.015, 0.035, Math.sin(a) * 0.015); hd.add(st); } });
+            top = h + 0.25; break;
+          }
+          case "starflower": {
+            const h = 1.35 * k; g.add(stemTube(h, 0.06, 0.025).m); addLeaf(g, h * 0.3, 1.2, 0.4);
+            const shine = new T.MeshStandardMaterial({ color: lin(c), emissive: lin(c), emissiveIntensity: 0.45, roughness: 0.35 }); shine.userData.hex = c;
+            const hd = new T.Group(); hd.position.y = h; hd.rotation.x = 0.3; g.add(hd);
+            for (let i = 0; i < 5; i++) { const pv = new T.Group(); pv.rotation.y = i / 5 * 6.283; const pt = mesh(new T.ConeGeometry(0.06 * k, 0.24 * k, 4), shine); pt.rotation.x = Math.PI / 2; pt.scale.y = 1; pt.scale.x = 0.35; pt.position.z = 0.12 * k; pv.add(pt); hd.add(pv); }
+            const ctr = mesh(new T.SphereGeometry(0.04 * k, 12, 8), mat(acc || "#fff6c8")); hd.add(ctr);
+            const sp = glow(c, 0.7, 0.5); hd.add(sp);
+            top = h + 0.2; break;
+          }
+          case "dandelion": {
+            const h = 1.25 * k; g.add(stemTube(h, 0.08, 0.018).m);
+            for (let i = 0; i < 6; i++) { const lf = mesh(new T.SphereGeometry(1, 10, 6), mat(LEAF)); lf.scale.set(0.24, 0.015, 0.045); const a = i * 1.05; lf.position.set(Math.cos(a) * 0.14, 0.04, Math.sin(a) * 0.14); lf.rotation.y = -a; g.add(lf); }
+            const hd = new T.Group(); hd.position.y = h; g.add(hd);
+            const core = mesh(new T.SphereGeometry(0.03 * k, 10, 8), mat(acc || "#d8cfa8")); hd.add(core);
+            const n = 46, R0 = 0.16 * k;
+            for (let i = 0; i < n; i++) { const y = 1 - (i + 0.5) / n * 2, rr = Math.sqrt(1 - y * y), a = i * 2.39996; const dir = new T.Vector3(Math.cos(a) * rr, y, Math.sin(a) * rr);
+              const st = mesh(new T.CylinderGeometry(0.0025, 0.0025, R0, 3), mat("#f4f1e8")); st.position.copy(dir).multiplyScalar(R0 / 2); st.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), dir); hd.add(st);
+              const tuft = mesh(new T.SphereGeometry(0.014, 6, 4), mat(i % 3 ? "#ffffff" : c)); tuft.position.copy(dir).multiplyScalar(R0); hd.add(tuft); }
+            top = h + 0.22; break;
+          }
+          case "lotus": {
+            const pond = mesh(new T.CylinderGeometry(0.42, 0.42, 0.04, 30), new T.MeshStandardMaterial({ color: lin("#4f8fc4"), roughness: 0.12, metalness: 0.2 })); pond.position.y = 0.02; g.add(pond);
+            for (const [x, z, rr] of [[0.22, 0.12, 0.13], [-0.2, -0.14, 0.11], [0.02, -0.26, 0.09]]) { const pad = mesh(new T.CylinderGeometry(rr, rr, 0.012, 20, 1, false, 0.3, 5.8), mat("#5f9e5a")); pad.position.set(x, 0.045, z); g.add(pad); }
+            const hd = new T.Group(); hd.position.set(-0.04, 0.08, 0.04); hd.scale.setScalar(k); g.add(hd);
+            petalRing(hd, 8, 0.15, 0.06, c, 0.35, 0, 0, 0.03); petalRing(hd, 8, 0.13, 0.055, c, 0.75, 0.02, 0.39, 0.03); petalRing(hd, 6, 0.1, 0.045, acc || c, 1.15, 0.04, 0.2, 0.03);
+            const pod = mesh(new T.CylinderGeometry(0.05, 0.035, 0.05, 14), mat("#e6c23a")); pod.position.y = 0.05; hd.add(pod);
+            top = 0.45; break;
+          }
+          case "hydrangea": {
+            const h = 1.05 * k; g.add(stemTube(h, 0.05, 0.035).m);
+            for (const [y, a] of [[0.35, 0.4], [0.5, 2.5], [0.62, 4.4]]) addLeaf(g, h * y, a, 0.6);
+            const heads = [[0, h + 0.1, 0, 1]].concat(main.s >= 3 ? [[0.22, h * 0.82, 0.1, 0.75]] : []).concat(main.s >= 5 ? [[-0.2, h * 0.78, -0.08, 0.7]] : []);
+            heads.forEach(([x, y, z, sc2]) => { const hd = new T.Group(); hd.position.set(x, y, z); hd.scale.setScalar(sc2 * k); g.add(hd);
+              const n = 34, R0 = 0.2;
+              for (let i = 0; i < n; i++) { const yy = 1 - (i + 0.5) / n * 1.4, rr = Math.sqrt(Math.max(0, 1 - yy * yy)), a = i * 2.39996; const dir = new T.Vector3(Math.cos(a) * rr, yy, Math.sin(a) * rr).normalize();
+                const fl = new T.Group(); fl.position.copy(dir).multiplyScalar(R0); fl.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), dir);
+                const col = i % 4 === 0 && acc ? acc : c;
+                for (let q = 0; q < 4; q++) { const pt = mesh(new T.SphereGeometry(1, 8, 6), mat(col)); pt.scale.set(0.035, 0.008, 0.035); const qa = q * Math.PI / 2; pt.position.set(Math.cos(qa) * 0.03, 0, Math.sin(qa) * 0.03); fl.add(pt); }
+                hd.add(fl); } });
+            top = h + 0.35; break;
+          }
+          case "lavender": {
+            const n = 4 + main.s, lav = "#" + new T.Color(c).lerp(new T.Color("#9b7fd4"), 0.6).getHexString(), lavAcc = acc ? "#" + new T.Color(acc).lerp(new T.Color("#9b7fd4"), 0.4).getHexString() : lav;
+            for (let i = 0; i < n; i++) {
+              const a = i / n * 6.283 + r() * 0.4, lean = 0.08 + r() * 0.12, h = (0.9 + r() * 0.4) * k;
+              const end = new T.Vector3(Math.cos(a) * lean, h, Math.sin(a) * lean);
+              const s2 = stemTube(h, Math.cos(a) * 0.04, 0.009, end); s2.m.material = mat("#7f9a7a"); g.add(s2.m);
+              for (let q = 0; q < 9; q++) { const t2 = 0.68 + q * 0.04, pnt = s2.curve.getPoint(Math.min(1, t2)); const fl = mesh(new T.SphereGeometry(0.022 * (1 - q * 0.05), 8, 6), mat(i % 3 === 0 && acc ? lavAcc : lav)); fl.material.userData.hex = c; fl.scale.y = 1.3; fl.position.copy(pnt); g.add(fl); }
+            }
+            for (let i = 0; i < 6; i++) { const lf = mesh(new T.SphereGeometry(1, 8, 6), mat("#8fa88a")); lf.scale.set(0.012, 0.18, 0.012); const a = i * 1.05; lf.position.set(Math.cos(a) * 0.05, 0.15, Math.sin(a) * 0.05); lf.rotation.set(Math.sin(a) * 0.4, 0, -Math.cos(a) * 0.4); g.add(lf); }
+            top = 1.3 * k; break;
+          }
+          case "wildrose": {
+            const bushR = 0.2 * k, rose = "#" + new T.Color(c).lerp(new T.Color("#e8648a"), 0.6).getHexString(), roseAcc = acc ? "#" + new T.Color(acc).lerp(new T.Color("#e8648a"), 0.4).getHexString() : rose;
+            for (let i = 0; i < 5; i++) { const a = i * 1.26, b2 = mesh(new T.IcosahedronGeometry(bushR * (0.42 + (i % 3) * 0.08), 1), mat("#3f6b3f", { flatShading: true })); b2.position.set(Math.cos(a) * bushR * 0.55, bushR * (0.55 + (i % 2) * 0.3), Math.sin(a) * bushR * 0.55); g.add(b2); }
+            for (let i = 0; i < 14; i++) { const a = i * 2.39996, lf = mesh(new T.SphereGeometry(1, 8, 6), mat("#4f8a4f")); lf.scale.set(0.05, 0.012, 0.03); lf.position.set(Math.cos(a) * bushR * 0.95, bushR * (0.4 + (i % 5) * 0.22), Math.sin(a) * bushR * 0.95); lf.rotation.y = -a; g.add(lf); }
+            for (let i = 0; i < 10; i++) { const a = i * 2.3, th = mesh(new T.ConeGeometry(0.012, 0.06, 4), mat("#7a4a3a")); th.position.set(Math.cos(a) * bushR * 1.05, bushR * (0.5 + (i % 4) * 0.25), Math.sin(a) * bushR * 1.05); th.lookAt(new T.Vector3(Math.cos(a) * 3, th.position.y, Math.sin(a) * 3)); th.rotateX(Math.PI / 2); g.add(th); }
+            const nRose = 2 + Math.ceil(main.s / 2);
+            for (let i = 0; i < nRose; i++) { const a = i * 2.4 + 0.3, hd = new T.Group(); hd.position.set(Math.cos(a) * bushR * 0.95, bushR * (1.0 + (i % 2) * 0.35), Math.sin(a) * bushR * 0.95); hd.lookAt(new T.Vector3(Math.cos(a) * 3, hd.position.y + 1.5, Math.sin(a) * 3)); hd.rotateX(Math.PI / 2); g.add(hd);
+              petalRing(hd, 5, 0.085 * k, 0.07 * k, i === 0 && acc ? roseAcc : rose, 0.3, 0, 0, 0.022); hd.traverse(o => { if (o.material && o.material.userData.hex === rose) o.material.userData.hex = c; }); const ctr = mesh(new T.SphereGeometry(0.022, 8, 6), mat("#f6d36a")); ctr.position.y = 0.012; hd.add(ctr); }
+            top = bushR * 1.9 + 0.1; break;
+          }
           default: {
             g.add(stemTube(0.5, 0.03).m); addLeaf(g, 0.5, 0.3, 0.45); addLeaf(g, 0.5, 0.3 + Math.PI, 0.45, c);
             top = 0.65;
@@ -2440,8 +2540,19 @@ ${lines}
         }
       }
       if (stage === 3) { const fg = glow(c, 1.0, 0); fg.position.y = Math.max(0.3, top - 0.2); fg.userData.flowerGlow = true; g.add(fg); g.userData.glow = fg; }
+      if (stage === 3 && e.rare) {
+        const RAIN7 = ["#ff6b6b", "#ffa94d", "#ffe066", "#69db7c", "#4dabf7", "#748ffc", "#da77f2"]; let ri = 0;
+        const goldMat = side => new T.MeshStandardMaterial({ color: lin("#f3c64f"), metalness: 0.7, roughness: 0.28, emissive: lin("#7a5a00"), emissiveIntensity: 0.3, side });
+        const gm = { [T.FrontSide]: goldMat(T.FrontSide), [T.DoubleSide]: goldMat(T.DoubleSide) };
+        g.traverse(o => { if (o.isMesh && o.material && o.material.userData && o.material.userData.hex === c) {
+          if (e.rare === "gold") o.material = gm[o.material.side] || gm[T.FrontSide];
+          else { const m2 = o.material.clone(); m2.color = lin(RAIN7[ri++ % 7]); if (m2.emissive && m2.emissiveIntensity) m2.emissive = m2.color.clone(); o.material = m2; } } });
+        const tw = new T.Group(); tw.position.y = Math.max(0.3, top - 0.1);
+        for (let i = 0; i < 5; i++) { const sp = glow(e.rare === "gold" ? "#ffe9a0" : RAIN7[i], 0.18, 0.8); sp.userData.a = i / 5 * 6.283; tw.add(sp); }
+        g.add(tw); g.userData.twinkle = tw;
+      }
       g.traverse(o => { o.userData.entryId = e.id; });
-      g.userData.top = top;
+      g.userData.top = top; g.userData.fam = fam;
       return g;
     }
 
@@ -3084,7 +3195,7 @@ ${lines}
       renderer.toneMappingExposure = s.night ? 1.25 : 1.12;
       if (lanternGlow) lanternGlow.material.opacity = s.night ? 0.95 : skyKey === "dusk" ? 0.4 : 0;
       for (const dg of decorGlows) { dg.sprite.material.opacity = s.night ? 0.9 : skyKey === "dusk" ? 0.35 : dg.always ? 0.2 : 0; dg.mat.emissiveIntensity = s.night ? 1.6 : skyKey === "dusk" ? 0.6 : dg.always ? 0.5 : 0; }
-      for (const p of plants.values()) if (p.group.userData.glow) p.group.userData.glow.material.opacity = s.night ? 0.5 : skyKey === "dusk" ? 0.15 : 0;
+      for (const p of plants.values()) if (p.group.userData.glow) { const star = p.group.userData.fam === "starflower"; p.group.userData.glow.material.opacity = s.night ? (star ? 0.95 : 0.5) : skyKey === "dusk" ? (star ? 0.45 : 0.15) : (star ? 0.15 : 0); if (star) p.group.userData.glow.scale.setScalar(s.night ? 1.8 : 1.1); }
       flies.visible = s.night;
       lanternMat.emissiveIntensity = s.night ? 1.4 : skyKey === "dusk" ? 0.6 : 0;
       lanternLight.intensity = s.night ? 1.6 : skyKey === "dusk" ? 0.5 : 0;
@@ -3413,7 +3524,8 @@ ${lines}
     }
     new ResizeObserver(resize).observe(host); resize();
     let visible = true;
-    new IntersectionObserver(es => { visible = es[0].isIntersecting; }).observe(host);
+    // render only while the garden is on screen; checked directly each frame (an observer can miss a change)
+    const onScreen = () => { if (host.classList.contains("full")) return true; const r = host.getBoundingClientRect(); return r.bottom > -80 && r.top < (window.innerHeight || 800) + 80 && r.width > 0; };
     const easeOutBack = x => 1 + 2.2 * Math.pow(x - 1, 3) + 1.2 * Math.pow(x - 1, 2);
     let lastNow = 0, perf = { frames: 0, time: 0 }, chimeKick = 0;
     function lowerQuality() {
@@ -3422,11 +3534,13 @@ ${lines}
     }
     function tick(now) {
       requestAnimationFrame(tick);
+      visible = onScreen();
       if (!visible || document.hidden) { lastNow = 0; return; }
       const still = reduce.matches;
       for (const p of plants.values()) {
         const g = p.group;
         if (!still) { g.rotation.z = Math.sin(now / 1400 + p.phase) * 0.04; g.rotation.x = Math.cos(now / 1700 + p.phase) * 0.03; }
+        if (g.userData.twinkle && !still) g.userData.twinkle.children.forEach((sp, i) => { const a = sp.userData.a + now / 1200; sp.position.set(Math.cos(a) * 0.22, Math.sin(now / 400 + i) * 0.08, Math.sin(a) * 0.22); sp.material.opacity = 0.4 + 0.6 * Math.abs(Math.sin(now / 350 + i)); });
         if (p.grow) { const x = Math.min(1, (now - p.grow) / 900); g.scale.setScalar(PS * Math.max(0.05, easeOutBack(x))); if (x >= 1) { p.grow = 0; g.scale.setScalar(PS); } }
         if (p.drop) { p.drop.position.set(g.position.x, g.userData.top * g.scale.y + 0.35 + (still ? 0 : Math.sin(now / 450 + p.phase) * 0.08), g.position.z); p.drop.rotation.y = now / 900; }
       }
@@ -3643,7 +3757,7 @@ ${lines}
     wb.disabled = thirsty === 0;
     wb.textContent = thirsty ? `💧 물 주기 · ${thirsty}그루` : own ? "💧 돌봄 완료" : "💧 물 주기";
     const seen = new Set(entries.flatMap(e => e.emotions.map(x => x.n)));
-    $("guide-stat").textContent = `${TRACKED.length}종 중 ${TRACKED.filter(n => seen.has(n)).length}종 만남`;
+    { const rares = entries.filter(e => e.rare && stageOf(e) === 3); $("guide-stat").textContent = `${TRACKED.length}종 중 ${TRACKED.filter(n => seen.has(n)).length}종 만남` + (rares.length ? ` · ✨ 희귀 꽃 ${rares.length}송이` : ""); }
     const guide = $("guide"); guide.textContent = "";
     for (const [fam, [fname, fdesc]] of Object.entries(FAMILIES)) {
       const box = document.createElement("div"); box.className = "family";
@@ -3688,7 +3802,7 @@ ${lines}
     const stage = stageOf(e);
     $("sheet-date").textContent = `${y}년 ${+m}월 ${+d}일` + (e.example ? " · 예시" : "");
     $("sheet-title").textContent = e.title;
-    $("sheet-stage").textContent = `${plantName(e.emotions[0].n)} · ${STAGES[stage]}` + (stage < 3 ? (e.fast && stage === 0 ? " (곧 새싹이 돋아요)" : ` (꽃까지 물 ${watersLeft(e)}번)`) : "");
+    $("sheet-stage").textContent = `${stage === 3 && e.rare ? (e.rare === "gold" ? "✨ " : "🌈 ") : ""}${bloomName(e)} · ${STAGES[stage]}` + (stage < 3 ? (e.fast && stage === 0 ? " (곧 새싹이 돋아요)" : ` (꽃까지 물 ${watersLeft(e)}번)`) : "");
     $("sheet-note").hidden = !e.note; $("sheet-note").textContent = e.note || "";
     const emos = $("sheet-emos"); emos.textContent = "";
     for (const x of e.emotions) emos.append(chip(E[x.n][0], E[x.n][2], true, x.s));
