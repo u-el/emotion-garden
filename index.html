@@ -205,6 +205,27 @@ dialog::backdrop { background: rgba(10, 16, 14, 0.45); }
 .bday-flower { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; font-size: 1.8rem; background: var(--bg); flex: none; }
 select { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; }
 .week-nav { display: flex; align-items: center; gap: 8px; }
+.sheet-part { display: flex; flex-direction: column; gap: 10px; }
+.plant-sheet { position: relative; padding: 22px 22px 16px; gap: 8px; }
+.plant-sheet h3 { padding-right: 36px; font-size: 1.15rem; }
+.sheet-x { position: absolute; top: 10px; right: 10px; width: 36px; height: 36px; padding: 0; border: none; border-radius: 50%; background: transparent; color: var(--muted); font-size: 1rem; }
+.sheet-x:hover { background: var(--bg); color: var(--fg); }
+.plant-sheet .stage-line { font-size: 0.82rem; margin-top: -6px; }
+.plant-sheet .note { font-size: 0.92rem; padding: 9px 12px; }
+.plant-sheet .chips { gap: 5px; }
+.plant-sheet .chip { font-size: 0.76rem; padding: 2px 9px 2px 6px; }
+.plant-sheet .chip .dot { width: 9px; height: 9px; }
+.plant-sheet .diary { font-size: 0.95rem; line-height: 1.75; }
+.plant-sheet details summary { font-size: 0.82rem; color: var(--muted); }
+.plant-sheet .row button { padding: 6px 14px; font-size: 0.88rem; }
+.sheet-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; border-top: 1px solid var(--line); padding-top: 10px; margin-top: 2px; }
+.foot-left, .foot-right { display: flex; align-items: center; gap: 2px; }
+.sheet-foot .water { padding: 6px 14px; font-size: 0.88rem; }
+.water-done { font-size: 0.82rem; color: var(--muted); }
+.link-btn.danger { color: var(--danger); }
+#sheet-confirm { border-top: 1px solid var(--line); padding-top: 10px; }
+#sheet-confirm button { padding: 6px 14px; font-size: 0.88rem; }
+#del-yes { color: var(--danger); border-color: var(--danger); }
 #help-btn { padding-left: 0; margin-top: 2px; }
 .question { background: var(--accent-soft); border-radius: 12px; padding: 10px 14px; display: flex; flex-direction: column; gap: 2px; }
 .q-text { margin: 0; font-family: var(--font-display); font-size: 1rem; }
@@ -226,9 +247,9 @@ input[type="search"] { width: 100%; box-sizing: border-box; font: inherit; color
 .diary-emos i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 .diary-peek { font-size: 0.85rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 mark { background: color-mix(in srgb, var(--accent) 22%, transparent); color: inherit; border-radius: 3px; }
-.cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; max-width: 520px; width: 100%; margin: 0 auto; }
 .cal .dow { text-align: center; font-size: 0.75rem; color: var(--muted); padding-bottom: 2px; }
-.cal .day { aspect-ratio: 1; max-width: 100%; border-radius: 10px; border: 1px solid transparent; background: var(--bg); padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 0.78rem; color: var(--muted); font-variant-numeric: tabular-nums; position: relative; }
+.cal .day { height: 54px; max-width: 100%; border-radius: 10px; border: 1px solid transparent; background: var(--bg); padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 0.78rem; color: var(--muted); font-variant-numeric: tabular-nums; position: relative; }
 .cal .day.has { color: #1f2a24; font-weight: 600; cursor: pointer; }
 .cal .day.today { border-color: var(--accent); border-width: 2px; }
 .cal .day.out { visibility: hidden; }
@@ -484,7 +505,8 @@ mark { background: color-mix(in srgb, var(--accent) 22%, transparent); color: in
 </div>
 
 <dialog id="sheet">
-  <div class="sheet">
+  <div class="sheet plant-sheet">
+    <button type="button" class="sheet-x" id="sheet-close" aria-label="닫기">✕</button>
     <div class="date" id="sheet-date"></div>
     <div id="sheet-view" class="sheet-part">
       <h3 id="sheet-title"></h3>
@@ -496,11 +518,15 @@ mark { background: color-mix(in srgb, var(--accent) 22%, transparent); color: in
       <div class="safety" id="sheet-safety" hidden></div>
       <details id="sheet-orig-box" hidden><summary>내가 쓴 글</summary><p id="sheet-orig"></p></details>
       <div class="row" id="sheet-letter-row" hidden><button type="button" id="sheet-letter">✉️ 정원지기의 편지 읽기</button></div>
-      <div class="row" id="sheet-actions">
-        <button type="button" class="water" id="sheet-water">물 주기</button>
-        <button type="button" class="primary" id="sheet-close">닫기</button>
-        <button type="button" class="ghost" id="sheet-edit">고치기</button>
-        <button type="button" class="ghost" id="sheet-del">이 식물 뽑기</button>
+      <div class="sheet-foot" id="sheet-actions">
+        <div class="foot-left">
+          <button type="button" class="water" id="sheet-water">💧 물 주기</button>
+          <span class="water-done" id="sheet-water-done" hidden>💧 오늘 물을 줬어요</span>
+        </div>
+        <div class="foot-right">
+          <button type="button" class="link-btn" id="sheet-edit">고치기</button>
+          <button type="button" class="link-btn danger" id="sheet-del">뽑기</button>
+        </div>
       </div>
     </div>
     <div id="sheet-editor" class="sheet-part" hidden>
@@ -693,6 +719,7 @@ mark { background: color-mix(in srgb, var(--accent) 22%, transparent); color: in
       };
       if (Array.isArray(raw.waterDays)) entry.waterDays = raw.waterDays.map(String).slice(0, 4);
       if (raw.fast) entry.fast = true;
+      if (raw.question) entry.question = String(raw.question).slice(0, 200);
       if (raw.letter && typeof raw.letter.text === "string") entry.letter = { text: raw.letter.text.slice(0, 2000), at: Number(raw.letter.at) || Date.now(), read: !!raw.letter.read, ai: !!raw.letter.ai };
       try { await (store || localStore).add(entry); added++; } catch (e) { skipped++; }
     }
@@ -3118,9 +3145,8 @@ ${lines}
     lb.disabled = pending.has(e.id);
     lb.textContent = e.letter ? "✉️ 정원지기의 편지 읽기" : pending.has(e.id) ? "정원지기가 편지를 쓰는 중이에요…" : "✉️ 정원지기에게 편지 받기";
     const wb = $("sheet-water");
-    wb.hidden = !!e.example || stage === 3;
-    wb.disabled = !needsWater(e);
-    wb.textContent = needsWater(e) ? "물 주기" : "오늘은 물을 줬어요";
+    wb.hidden = !needsWater(e); wb.disabled = false;
+    $("sheet-water-done").hidden = !!e.example || stage === 3 || needsWater(e);
     $("sheet-del").hidden = !!e.example;
     $("sheet-edit").hidden = !!e.example;
   }
