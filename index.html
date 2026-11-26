@@ -1318,7 +1318,7 @@ ${entries.length ? `지금까지 ${entries.length}그루의 마음을 이 정원
   const GUIDE = [
     { art: "✍️", title: "오늘의 마음을 적어요", body: "오늘 있었던 일과 느낌을 편하게 적어요.\n정원지기가 감정을 읽고 어울리는 씨앗을 골라줘요.\n막막하면 '오늘의 질문'에 답해 보세요." },
     { art: "🌱", title: "씨앗을 심고 물을 줘요", body: "하루 한 번 물을 주면 씨앗 → 새싹 → 꽃봉오리 → 꽃으로 자라요.\n꽃이 피면 정원지기의 편지가 와요.\n첫 씨앗은 3분 뒤에 새싹이 돋아요." },
-    { art: "🏝️", title: "정원을 둘러봐요", body: "섬을 손가락으로 돌려 보고, 꽃을 누르면 그날의 일기가 열려요.\n떨어지는 반짝이는 꽃잎을 모아 정원을 꾸미고,\n섬 안으로 들어가 산책도 할 수 있어요." },
+    { art: "🏝️", title: "정원을 둘러봐요", body: "섬을 손가락으로 돌려 보고, 꽃을 누르면 그날의 일기가 열려요.\n떨어지는 반짝이는 꽃잎을 모아 정원을 꾸미고,\n섬 안으로 들어가 산책하며 숨은 네잎클로버도 찾아보세요." },
   ];
   let guideStep = 0;
   function renderGuide() {
@@ -2431,14 +2431,16 @@ ${lines}
         for (let i = 0; i < 4; i++) { const lf = mesh(new T.SphereGeometry(1, 12, 8), mat("#3f9a4a")); lf.scale.set(0.06, 0.012, 0.055); const a = i * Math.PI / 2 + 0.4; lf.position.set(Math.cos(a) * 0.05, 0.16, Math.sin(a) * 0.05); c.add(lf); }
         const st = mesh(new T.CylinderGeometry(0.006, 0.006, 0.16, 5), mat(LEAF)); st.position.y = 0.08; c.add(st);
         const sh = glow("#d8ffb0", 0.35, 0.35); sh.position.y = 0.17; c.add(sh);
-        c.userData.hunt = "clover"; huntItems.push(c); huntGroup.add(c);
+        c.add(new T.Mesh(new T.SphereGeometry(0.4, 8, 6), hitMat));
+        c.userData.hunt = "clover"; c.traverse(o => { o.userData.huntItem = c; }); huntItems.push(c); huntGroup.add(c);
       }
       if (!h.note) {
         const c = new T.Group(); const [x, z] = spot(today() + "note"); c.position.set(x, 0.05, z);
         const roll = mesh(new T.CylinderGeometry(0.035, 0.035, 0.2, 12), mat("#efe2c4")); roll.rotation.z = Math.PI / 2; c.add(roll);
         const rib = mesh(new T.TorusGeometry(0.037, 0.008, 6, 14), mat("#c4553f")); rib.rotation.y = Math.PI / 2; c.add(rib);
         const sh = glow("#fff1c4", 0.35, 0.35); sh.position.y = 0.05; c.add(sh);
-        c.userData.hunt = "note"; huntItems.push(c); huntGroup.add(c);
+        c.add(new T.Mesh(new T.SphereGeometry(0.4, 8, 6), hitMat));
+        c.userData.hunt = "note"; c.traverse(o => { o.userData.huntItem = c; }); huntItems.push(c); huntGroup.add(c);
       }
       huntGroup.visible = mode === "walk"; world.add(huntGroup);
       syncHuntChip();
@@ -2447,6 +2449,7 @@ ${lines}
       const h = hunt(), chip = $("hunt-chip");
       chip.hidden = !(mode === "walk" && entries.length);
       chip.textContent = `오늘의 숨은 찾기 · 🍀 ${h.clover ? "찾음" : "?"} · 📜 ${h.note ? "찾음" : "?"}`;
+      if (!h.clover || !h.note) chip.title = "가까이 걸어가거나 눌러서 주워요";
     }
     function stepHunt(now) {
       if (!huntGroup) return;
@@ -2455,7 +2458,7 @@ ${lines}
       for (const c of huntItems) {
         if (c.userData.done) continue;
         if (!reduce.matches) c.rotation.y = now / 1500;
-        if (Math.hypot(c.position.x - walker.x, c.position.z - walker.z) < 0.6) { c.userData.done = true; c.visible = false; foundHidden(c.userData.hunt); }
+        if (Math.hypot(c.position.x - walker.x, c.position.z - walker.z) < 0.8) { c.userData.done = true; c.visible = false; foundHidden(c.userData.hunt); }
       }
     }
 
@@ -2644,9 +2647,15 @@ ${lines}
       const rect = renderer.domElement.getBoundingClientRect();
       ndc.set(((ev.clientX - rect.left) / rect.width) * 2 - 1, -((ev.clientY - rect.top) / rect.height) * 2 + 1);
       ray.setFromCamera(ndc, camera);
-      const targets = mode === "orbit" ? [...pathStones] : []; if (mailbox) targets.push(mailbox); if (birthIslet) targets.push(birthIslet); if (decorGroup) targets.push(decorGroup); collects.forEach(c => { if (!c.userData.dying) targets.unshift(c); }); for (const p of plants.values()) { targets.push(p.group); if (p.drop) targets.push(p.drop); }
+      const targets = mode === "orbit" ? [...pathStones] : []; if (mailbox) targets.push(mailbox); if (birthIslet) targets.push(birthIslet); if (decorGroup) targets.push(decorGroup); collects.forEach(c => { if (!c.userData.dying) targets.unshift(c); }); if (mode === "walk") huntItems.forEach(c => { if (!c.userData.done) targets.unshift(c); }); for (const p of plants.values()) { targets.push(p.group); if (p.drop) targets.push(p.drop); }
       const hit = ray.intersectObjects(targets, true)[0];
       if (hit && hit.object.userData.path) { enterWalk(); return; }
+      if (hit && hit.object.userData.huntItem) {
+        const c = hit.object.userData.huntItem;
+        if (c.userData.done) return;
+        if (Math.hypot(c.position.x - walker.x, c.position.z - walker.z) > 4.5) { showTip(c.userData.hunt === "clover" ? "🍀 저기 뭔가 있어요! 조금 더 가까이 가 보세요" : "📜 저기 뭔가 있어요! 조금 더 가까이 가 보세요", true); return; }
+        c.userData.done = true; c.visible = false; foundHidden(c.userData.hunt); return;
+      }
       if (hit && hit.object.userData.collect && hit.object.userData.collect.userData) { const c = hit.object.userData.collect; if (!c.userData.dying && collectPetal()) c.userData.dying = performance.now(); return; }
       if (hit && hit.object.userData.decor) { const d = DECOR.find(x => x.id === hit.object.userData.decor); if (d.id === "chime") { Music.sfx("chime"); chimeKick = performance.now(); } showTip(`${d.icon} ${d.name}`, true); return; }
       if (hit && hit.object.userData.birthday) { openBirthdayCard(); return; }
