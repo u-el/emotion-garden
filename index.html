@@ -126,6 +126,16 @@ canvas { display: block; width: 100%; cursor: pointer; touch-action: manipulatio
 .season-chip { top: 62px; }
 .music-chip { top: 112px; }
 .full-chip { top: 162px; }
+.wallet { top: 12px; left: 12px; border-radius: 999px; padding: 6px 14px; font-weight: 700; font-variant-numeric: tabular-nums; box-shadow: 0 2px 8px rgba(20, 30, 25, 0.12); }
+#garden3d.walking .wallet { top: 60px; }
+#garden3d.full .wallet { left: calc(12px + env(safe-area-inset-left, 0px)); margin-top: env(safe-area-inset-top, 0px); }
+.shop-list { display: flex; flex-direction: column; gap: 8px; max-height: 52vh; overflow: auto; }
+.shop-item { display: grid; grid-template-columns: 44px 1fr auto; gap: 10px; align-items: center; background: var(--bg); border-radius: 12px; padding: 8px 10px; }
+.shop-icon { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; font-size: 1.5rem; background: var(--surface); }
+.shop-text { min-width: 0; }
+.shop-name { font-weight: 600; }
+.shop-desc { font-size: 0.8rem; color: var(--muted); }
+.shop-item button { padding: 6px 14px; white-space: nowrap; }
 .full-water { left: 12px; bottom: 14px; padding: 8px 14px; font-weight: 600; color: #1d5fa8; }
 #garden3d.full { position: fixed; inset: 0; z-index: 50; height: 100%; min-height: 0; }
 #garden3d.full .time-chip { right: calc(12px + env(safe-area-inset-right, 0px)); margin-top: env(safe-area-inset-top, 0px); }
@@ -150,7 +160,7 @@ canvas { display: block; width: 100%; cursor: pointer; touch-action: manipulatio
 .near-date { font-size: 0.78rem; color: #4d5c54; }
 .near-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
 .near-actions button { padding: 4px 12px; font-size: 0.82rem; background: #fff; color: #23302a; border-color: #c9d5cb; }
-.walk-tip { left: 12px; right: 66px; top: 62px; border-radius: 12px; padding: 8px 14px; text-align: center; transition: opacity 0.6s; }
+.walk-tip { pointer-events: none; left: 12px; right: 66px; top: 62px; border-radius: 12px; padding: 8px 14px; text-align: center; transition: opacity 0.6s; }
 .walk-tip.center { margin-inline: auto; width: max-content; max-width: calc(100% - 78px); }
 .hint { font-size: 0.82rem; color: var(--muted); margin: 0; }
 .stages { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.82rem; color: var(--muted); }
@@ -283,6 +293,7 @@ select { font: inherit; color: var(--fg); background: var(--bg); border: 1px sol
     </div>
     <div class="row">
       <button type="button" class="water" id="water-all">오늘 물 주기</button>
+      <button type="button" class="ghost" id="decor-btn">🪴 정원 꾸미기</button>
       <button type="button" class="ghost" id="music-btn" aria-pressed="false">🎵 음악 켜기</button>
       <label class="vol" id="music-vol-wrap" hidden><span class="label">소리</span><input type="range" id="music-vol" min="0" max="100" value="60" aria-label="음악 소리 크기"></label>
       <span class="msg" id="garden-msg" role="status"></span>
@@ -290,6 +301,7 @@ select { font: inherit; color: var(--fg); background: var(--bg); border: 1px sol
     <p class="example-note" id="example-note" hidden>아래는 예시 정원이에요. 첫 씨앗을 심으면 내 정원으로 바뀌어요.</p>
     <div class="canvas-box">
       <div id="garden3d" hidden aria-label="미니어처 감정 정원. 드래그해서 돌려 보고, 식물을 누르면 그날의 일기가 열려요.">
+        <button type="button" class="glass wallet" id="wallet-chip">🌸 0</button>
         <button type="button" class="time-chip" id="time-btn"></button>
         <button type="button" class="time-chip season-chip" id="season-btn"></button>
         <button type="button" class="time-chip music-chip" id="music-chip" aria-label="음악 켜기"></button>
@@ -417,6 +429,15 @@ select { font: inherit; color: var(--fg); background: var(--bg); border: 1px sol
   </div>
 </dialog>
 
+<dialog id="shop">
+  <div class="sheet">
+    <div class="panel-head"><h3>정원 꾸미기</h3><span class="seed-name" id="shop-balance"></span></div>
+    <p class="hint">정원에 가끔 떨어지는 반짝이는 꽃잎을 눌러 모으세요(하루 20장까지). 씨앗을 심으면 5장, 물을 주면 1장, 꽃이 피면 6장을 더 받아요.</p>
+    <div class="shop-list" id="shop-list"></div>
+    <div class="row"><button type="button" class="primary" id="shop-close">닫기</button><span class="msg" id="shop-msg" role="status"></span></div>
+  </div>
+</dialog>
+
 <dialog id="letter">
   <div class="letter-sheet">
     <div class="stamp" id="letter-stamp" aria-hidden="true">🌸</div>
@@ -479,7 +500,10 @@ select { font: inherit; color: var(--fg); background: var(--bg); border: 1px sol
   const hash = s => { let h = 2166136261; for (const c of String(s)) { h ^= c.codePointAt(0); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967295; };
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const newId = () => "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-  const stageOf = e => Array.isArray(e.waterDays) ? clamp(e.waterDays.length - 1, 0, 3) : 3;
+  const FAST_MS = 3 * 60 * 1000; // the very first seed sprouts on its own after three minutes
+  const stageOf = e => { if (!Array.isArray(e.waterDays)) return 3; let st = e.waterDays.length - 1; if (e.fast && Date.now() - (e.createdAt || 0) >= FAST_MS) st += 1; return clamp(st, 0, 3); };
+  const watersLeft = e => !Array.isArray(e.waterDays) ? 0 : e.fast ? Math.max(0, 3 - e.waterDays.length) : Math.max(0, 3 - stageOf(e));
+  const bloomDay = e => Array.isArray(e.waterDays) ? e.waterDays[e.fast ? 2 : 3] : null;
   const needsWater = e => !e.example && stageOf(e) < 3 && !(e.waterDays || []).includes(today());
   function setMsg(el, t, kind) { el.textContent = t; el.className = "msg" + (kind ? " " + kind : ""); }
   { const d = new Date(); $("today-label").textContent = `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`; }
@@ -542,7 +566,7 @@ select { font: inherit; color: var(--fg); background: var(--bg); border: 1px sol
     if (!file) return;
     let list;
     let wk = {};
-    try { const j = JSON.parse(await file.text()); list = Array.isArray(j) ? j : j.entries; if (!Array.isArray(list)) throw 0; if (j && j.weeks && typeof j.weeks === "object") wk = j.weeks; if (j && j.profile && !profile && Number(j.profile.birthMonth) >= 1 && Number(j.profile.birthMonth) <= 12) { const bm = Number(j.profile.birthMonth), bd = Number(j.profile.birthDay) || null; try { await (store || localStore).setProfile({ birthMonth: bm, birthDay: bd && bd >= 1 && bd <= 31 ? bd : null, bdayLetters: typeof j.profile.bdayLetters === "object" && j.profile.bdayLetters ? j.profile.bdayLetters : {} }); } catch (e) {} } }
+    try { const j = JSON.parse(await file.text()); list = Array.isArray(j) ? j : j.entries; if (!Array.isArray(list)) throw 0; if (j && j.weeks && typeof j.weeks === "object") wk = j.weeks; if (j && j.profile && !(profile && profile.petals) && Number(j.profile.petals) > 0) { try { await saveProfile({ petals: Math.min(99999, Math.floor(Number(j.profile.petals))), decor: typeof j.profile.decor === "object" && j.profile.decor ? j.profile.decor : {} }); } catch (e) {} } if (j && j.profile && !hasBirthday() && Number(j.profile.birthMonth) >= 1 && Number(j.profile.birthMonth) <= 12) { const bm = Number(j.profile.birthMonth), bd = Number(j.profile.birthDay) || null; try { await saveProfile({ birthMonth: bm, birthDay: bd && bd >= 1 && bd <= 31 ? bd : null, bdayLetters: typeof j.profile.bdayLetters === "object" && j.profile.bdayLetters ? j.profile.bdayLetters : {} }); } catch (e) {} } }
     catch (e) { setMsg(msg, "감정정원 백업 파일이 아니에요. 백업 받은 .json 파일을 골라 주세요.", "err"); return; }
     let added = 0, skipped = 0;
     for (const raw of list) {
@@ -556,6 +580,7 @@ select { font: inherit; color: var(--fg); background: var(--bg); border: 1px sol
         note: String(raw.note || ""), original: String(raw.original || ""),
       };
       if (Array.isArray(raw.waterDays)) entry.waterDays = raw.waterDays.map(String).slice(0, 4);
+      if (raw.fast) entry.fast = true;
       if (raw.letter && typeof raw.letter.text === "string") entry.letter = { text: raw.letter.text.slice(0, 2000), at: Number(raw.letter.at) || Date.now(), read: !!raw.letter.read, ai: !!raw.letter.ai };
       try { await (store || localStore).add(entry); added++; } catch (e) { skipped++; }
     }
@@ -702,18 +727,19 @@ ${text}
     if (!draft) return;
     const msg = $("plant-msg");
     if (!draft.emotions.length) { setMsg(msg, "감정을 하나 이상 골라 주세요.", "err"); renderPicker(true); return; }
+    const first = entries.length === 0, plantedToday = entries.filter(x => x.date === today()).length;
     const entry = {
-      id: newId(), v: 2, date: today(), createdAt: Date.now(), waterDays: [today()],
+      id: newId(), v: 2, date: today(), createdAt: Date.now(), waterDays: [today()], ...(first ? { fast: true } : {}),
       emotions: draft.emotions.map(x => ({ n: x.n, s: x.s })),
       title: ($("r-title").value.trim() || E[draft.emotions[0].n][0] + "의 하루").slice(0, 40),
       diary: $("r-diary").value.trim(), note: draft.note, original: draft.original,
     };
-    try { await (store || localStore).add(entry); Music.sfx("plant"); }
+    try { await (store || localStore).add(entry); Music.sfx("plant"); if (plantedToday < 2) earn(5, "씨앗을 심었어요"); }
     catch (e) { setMsg(msg, "심지 못했어요. 새로고침한 뒤 다시 시도해 주세요.", "err"); return; }
     draft = null; $("reading").hidden = true; $("walk-input").value = "";
     try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
     setMsg($("write-msg"), "");
-    setMsg($("garden-msg"), `${seedName(entry.emotions[0].n)}을 심었어요. 내일부터 물을 주면 자라요.`, "ok");
+    setMsg($("garden-msg"), first ? `${seedName(entry.emotions[0].n)}을 심었어요. 첫 씨앗이라 3분 뒤에 새싹이 돋아요 🌱` : `${seedName(entry.emotions[0].n)}을 심었어요. 내일부터 물을 주면 자라요.`, "ok");
     $("garden-title").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
   });
 
@@ -721,13 +747,15 @@ ${text}
   async function water(e) {
     const days = [...(e.waterDays || []), today()];
     await (store || localStore).update(e.id, { waterDays: days });
-    const st = clamp(days.length - 1, 0, 3);
+    const st = stageOf({ ...e, waterDays: days });
     Music.sfx(st === 3 ? "bloom" : "water");
+    if (!e.example) earn(st === 3 ? 6 : 1, st === 3 ? "꽃이 피었어요" : "");
     if (st === 3) deliverLetter({ ...e, waterDays: days });
     return st;
   }
 
   // ---------- Gardener's letters ----------
+  const eul = w => { const c = w.charCodeAt(w.length - 1); return w + (c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 ? "을" : "를"); };
   const iga = w => { const c = w.charCodeAt(w.length - 1); return w + (c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 ? "이" : "가"); };
   const md = d => { const [, m, dd] = String(d).split("-"); return `${+m}월 ${+dd}일`; };
   const pending = new Set();
@@ -784,7 +812,7 @@ ${care}번의 물을 주며 돌봐준 덕분에 오늘 꽃이 되었어요.
     } catch (err) { setMsg($("garden-msg"), "편지를 받지 못했어요. 그날의 식물을 눌러 다시 받아 보세요.", "err"); }
     finally { pending.delete(e.id); render(); }
   }
-  const canGetLetter = e => !e.example && !e.letter && Array.isArray(e.waterDays) && e.waterDays.length >= 4;
+  const canGetLetter = e => !e.example && !e.letter && Array.isArray(e.waterDays) && e.waterDays.length >= 2 && stageOf(e) === 3;
   let letterId = null;
   function openLetter(e) {
     letterId = e.id;
@@ -828,7 +856,8 @@ ${care}번의 물을 주며 돌봐준 덕분에 오늘 꽃이 되었어요.
     11: { name: "국화", lang: "진실", icon: "🌼" },
     12: { name: "포인세티아", lang: "축복", icon: "❤️" },
   };
-  const isBirthMonth = () => !!profile && new Date().getMonth() + 1 === profile.birthMonth;
+  const hasBirthday = () => !!(profile && profile.birthMonth);
+  const isBirthMonth = () => hasBirthday() && new Date().getMonth() + 1 === profile.birthMonth;
   const isBirthday = () => !!profile && !!profile.birthDay && isBirthMonth() && new Date().getDate() === profile.birthDay;
   function daysUntilBirthday() {
     if (!profile || !profile.birthDay) return null;
@@ -847,11 +876,11 @@ ${care}번의 물을 주며 돌봐준 덕분에 오늘 꽃이 되었어요.
   $("bday-save").onclick = async () => {
     const m = Number($("bday-month").value), d = Number($("bday-day").value) || null;
     if (d && d > new Date(2024, m, 0).getDate()) { setMsg($("bday-msg"), `${m}월에는 ${d}일이 없어요. 날짜를 다시 골라 주세요.`, "err"); return; }
-    try { await (store || localStore).setProfile({ birthMonth: m, birthDay: d, bdayLetters: (profile && profile.bdayLetters) || {} }); bdayEditing = false; renderBirthday(); setMsg($("bday-msg"), ""); Music.sfx("bloom"); if (g3d) g3d.tip(`${BIRTH[m].icon} ${iga(BIRTH[m].name)} 생일꽃 섬에 피었어요`); }
+    try { await saveProfile({ birthMonth: m, birthDay: d, bdayLetters: (profile && profile.bdayLetters) || {} }); bdayEditing = false; renderBirthday(); setMsg($("bday-msg"), ""); Music.sfx("bloom"); if (g3d) g3d.tip(`${BIRTH[m].icon} ${iga(BIRTH[m].name)} 생일꽃 섬에 피었어요`); }
     catch (e) { setMsg($("bday-msg"), "저장하지 못했어요. 다시 시도해 주세요.", "err"); }
   };
   function openBirthdayCard() {
-    if (!profile) { $("bday-title").scrollIntoView({ behavior: "smooth", block: "center" }); return; }
+    if (!hasBirthday()) { $("bday-title").scrollIntoView({ behavior: "smooth", block: "center" }); return; }
     const b = BIRTH[profile.birthMonth], left = daysUntilBirthday();
     const year = String(new Date().getFullYear()), letter = profile.bdayLetters && profile.bdayLetters[year];
     if (isBirthday() && letter) { showPaper(`${md(today())} · 생일 편지`, "생일 축하해요 🎂", b.icon, letter.text, false); return; }
@@ -898,11 +927,11 @@ ${entries.length ? `지금까지 ${entries.length}그루의 마음을 이 정원
   }
   $("bday-banner-btn").onclick = openBirthdayCard;
   function renderBirthday() {
-    const has = !!profile && !bdayEditing;
+    const has = hasBirthday() && !bdayEditing;
     $("bday-view").hidden = !has; $("bday-form").hidden = has;
-    $("bday-cancel").hidden = !profile;
-    $("bday-save").textContent = profile ? "바꾸기" : "생일꽃 심기";
-    if (profile) {
+    $("bday-cancel").hidden = !hasBirthday();
+    $("bday-save").textContent = hasBirthday() ? "바꾸기" : "생일꽃 심기";
+    if (hasBirthday()) {
       const b = BIRTH[profile.birthMonth], left = daysUntilBirthday();
       $("bday-flower-icon").textContent = b.icon;
       $("bday-flower-name").textContent = `${profile.birthMonth}월의 탄생화 · ${b.name}`;
@@ -917,6 +946,99 @@ ${entries.length ? `지금까지 ${entries.length}그루의 마음을 이 정원
       ensureBirthdayLetter();
     }
   }
+  // ---------- Petals & decorations ----------
+  const DECOR = [
+    { id: "mushroom", name: "버섯 무리", icon: "🍄", price: 6, desc: "비 온 다음 날 쏙 올라온 버섯들" },
+    { id: "cairn", name: "돌탑", icon: "🪨", price: 8, desc: "소원을 하나씩 얹어 쌓은 돌탑" },
+    { id: "chime", name: "풍경", icon: "🎐", price: 10, desc: "바람에 흔들리고, 누르면 맑은 소리가 나요" },
+    { id: "lamp", name: "초롱", icon: "🏮", price: 12, desc: "밤이 되면 불이 켜져요" },
+    { id: "bench", name: "나무 벤치", icon: "🪑", price: 15, desc: "잠깐 앉아 쉬어 가는 자리" },
+    { id: "birdhouse", name: "새집", icon: "🐦", price: 18, desc: "작은 새가 놀러 오는 집" },
+    { id: "pond", name: "작은 연못", icon: "💧", price: 25, desc: "연잎이 떠 있는 동그란 연못" },
+    { id: "arch", name: "꽃 아치", icon: "🌸", price: 30, desc: "산책길 입구를 꾸미는 꽃 아치" },
+  ];
+  const COLLECT_CAP = 20;
+  let petalBuffer = 0, collectBuffer = 0, petalTimer = null;
+  const saveProfile = patch => (store || localStore).setProfile({ ...(profile || {}), ...patch });
+  const petalsNow = () => ((profile && profile.petals) || 0) + petalBuffer;
+  const collectedToday = () => ((profile && profile.petalDay && profile.petalDay.date === today()) ? profile.petalDay.n : 0) + collectBuffer;
+  const collectLeft = () => !!entries.length && COLLECT_CAP - collectedToday() > 0;
+  function earn(n, why) {
+    if (!n) return;
+    petalBuffer += n; renderWallet();
+    if (g3d && why) g3d.tip(`🌸 꽃잎 +${n} · ${why}`, true);
+    clearTimeout(petalTimer); petalTimer = setTimeout(flushPetals, 1200);
+  }
+  function flushPetals() {
+    const n = petalBuffer, c = collectBuffer; petalBuffer = 0; collectBuffer = 0;
+    if (!n && !c) return;
+    const base = (profile && profile.petalDay && profile.petalDay.date === today()) ? profile.petalDay.n : 0;
+    saveProfile({ petals: ((profile && profile.petals) || 0) + n, petalDay: { date: today(), n: base + c } }).catch(() => { petalBuffer += n; collectBuffer += c; });
+  }
+  addEventListener("pagehide", flushPetals);
+  function collectPetal() {
+    if (!collectLeft()) return false;
+    collectBuffer++; earn(1, "");
+    Music.sfx("collect");
+    if (g3d) g3d.tip(`🌸 꽃잎 +1 · 오늘 ${collectedToday()}/${COLLECT_CAP}`, true);
+    return true;
+  }
+  function renderWallet() {
+    const n = petalsNow();
+    $("wallet-chip").textContent = `🌸 ${n}`; $("wallet-chip").setAttribute("aria-label", `꽃잎 ${n}장, 정원 꾸미기 열기`);
+    $("shop-balance").textContent = `🌸 ${n}장`;
+    if ($("shop").open) renderShop();
+  }
+  function renderShop() {
+    const box = $("shop-list"); box.textContent = "";
+    const owned = (profile && profile.decor) || {}, n = petalsNow();
+    for (const d of DECOR) {
+      const row = document.createElement("div"); row.className = "shop-item";
+      const ic = document.createElement("div"); ic.className = "shop-icon"; ic.textContent = d.icon;
+      const tx = document.createElement("div"); tx.className = "shop-text";
+      const nm = document.createElement("div"); nm.className = "shop-name"; nm.textContent = d.name;
+      const ds = document.createElement("div"); ds.className = "shop-desc"; ds.textContent = d.desc;
+      tx.append(nm, ds);
+      const b = document.createElement("button"); b.type = "button";
+      const mine = owned[d.id];
+      if (!mine) { b.className = "primary"; b.textContent = `🌸 ${d.price}`; b.disabled = n < d.price; b.setAttribute("aria-label", `${d.name} 꽃잎 ${d.price}장으로 사기`); b.onclick = () => buyDecor(d); }
+      else { b.className = mine.shown ? "ghost" : ""; b.textContent = mine.shown ? "치우기" : "놓기"; b.onclick = () => toggleDecor(d); }
+      row.append(ic, tx, b); box.append(row);
+    }
+  }
+  async function buyDecor(d) {
+    const total = petalsNow(); if (total < d.price) return;
+    clearTimeout(petalTimer);
+    const c = collectBuffer, base = (profile && profile.petalDay && profile.petalDay.date === today()) ? profile.petalDay.n : 0;
+    petalBuffer = 0; collectBuffer = 0;
+    try {
+      await saveProfile({ petals: total - d.price, petalDay: { date: today(), n: base + c }, decor: { ...((profile && profile.decor) || {}), [d.id]: { shown: true, at: Date.now() } } });
+      Music.sfx("bloom"); setMsg($("shop-msg"), `${d.icon} ${eul(d.name)} 정원에 놓았어요.`, "ok"); if (g3d) g3d.tip(`${d.icon} ${eul(d.name)} 놓았어요`, true);
+    } catch (e) { petalBuffer = total - ((profile && profile.petals) || 0); setMsg($("shop-msg"), "사지 못했어요. 다시 시도해 주세요.", "err"); }
+    renderShop();
+  }
+  async function toggleDecor(d) {
+    const decor = { ...((profile && profile.decor) || {}) }; decor[d.id] = { ...decor[d.id], shown: !decor[d.id].shown };
+    try { await saveProfile({ decor }); } catch (e) { setMsg($("shop-msg"), "바꾸지 못했어요. 다시 시도해 주세요.", "err"); }
+    renderShop();
+  }
+  function openShop() { setMsg($("shop-msg"), ""); renderShop(); renderWallet(); $("shop").showModal(); }
+  $("wallet-chip").onclick = openShop;
+  $("decor-btn").onclick = openShop;
+  $("shop-close").onclick = () => $("shop").close();
+  $("shop").addEventListener("click", ev => { if (ev.target === $("shop")) $("shop").close(); });
+  // the first seed sprouts by itself after three minutes: refresh and celebrate when it happens
+  const sproutSeen = new Set();
+  setInterval(() => {
+    const ready = entries.filter(e => e.fast && !sproutSeen.has(e.id) && (e.waterDays || []).length === 1 && Date.now() - (e.createdAt || 0) >= FAST_MS);
+    if (!ready.length) { entries.filter(e => e.fast && Date.now() - (e.createdAt || 0) >= FAST_MS).forEach(e => sproutSeen.add(e.id)); return; }
+    ready.forEach(e => sproutSeen.add(e.id));
+    render(); Music.sfx("plant");
+    setMsg($("garden-msg"), "🌱 첫 새싹이 돋았어요! 내일 물을 주면 꽃봉오리가 맺혀요.", "ok");
+    if (g3d) g3d.tip("🌱 첫 새싹이 돋았어요!", true);
+  }, 10000);
+  setTimeout(() => entries.filter(e => e.fast && Date.now() - (e.createdAt || 0) >= FAST_MS).forEach(e => sproutSeen.add(e.id)), 12000);
+
   // ---------- Weekly walk map ----------
   const MOODS = [
     { key: "bright", name: "밝음", fams: ["daisy", "tulip"], color: "#f0b53c" },
@@ -989,7 +1111,7 @@ ${entries.length ? `지금까지 ${entries.length}그루의 마음을 이 정원
     // stats
     const walked = byDay.filter(l => l.length).length;
     const waters = src.reduce((n, e) => n + (e.waterDays || []).filter(w => days.includes(w)).length, 0);
-    const bloomedHere = src.filter(e => Array.isArray(e.waterDays) && e.waterDays.length >= 4 && days.includes(e.waterDays[3])).length;
+    const bloomedHere = src.filter(e => stageOf(e) === 3 && days.includes(bloomDay(e))).length;
     const stats = $("week-stats"); stats.textContent = "";
     for (const [v, l] of [[`${walked}/7`, "산책한 날"], [waters, "물 준 횟수"], [bloomedHere, "피어난 꽃"]]) {
       const c = document.createElement("div"); c.className = "week-stat";
@@ -1853,11 +1975,11 @@ ${lines}
     }
     let birthIslet = null, birthKey = "", sparkles = null;
     function syncBirthIslet() {
-      const key = profile ? `${profile.birthMonth}|${islandR}` : "";
+      const key = hasBirthday() ? `${profile.birthMonth}|${islandR}` : "";
       if (key === birthKey) { if (sparkles) sparkles.visible = isBirthMonth(); return; }
       birthKey = key;
       if (birthIslet) { world.remove(birthIslet); birthIslet = null; sparkles = null; }
-      if (!profile) return;
+      if (!hasBirthday()) return;
       const R = islandR, bi = new T.Group(), ang = 1.7, dist = R * 1.28;
       bi.position.set(Math.cos(ang) * dist, 0.35, Math.sin(ang) * dist);
       const top = mesh(new T.CylinderGeometry(1.0, 0.96, 0.22, 36), grassTopMat, false); top.position.y = -0.11;
@@ -1875,6 +1997,142 @@ ${lines}
       sparkles.add(glow("#ffe9b0", 1.6, 0.45)); sparkles.visible = isBirthMonth(); bi.add(sparkles);
       bi.traverse(o => { o.userData.birthday = true; });
       bi.userData.baseY = 0.35; birthIslet = bi; world.add(bi);
+    }
+
+    // ---- decorations bought with petals ----
+    const DECOR_SPOT = { mushroom: [0.55, 0.84], cairn: [0.2, 0.86], chime: [1.3, 0.86], lamp: [1.95, 0.86], bench: [3.05, 0.84], birdhouse: [3.6, 0.86], pond: [4.65, 0.78], arch: [-0.6, 0.9] };
+    const decorObstacles = [], decorGlows = []; let decorGroup = null, decorKey = "", chimeStrip = null;
+    function buildDecor(id) {
+      const g = new T.Group(); let r = 0.35;
+      switch (id) {
+        case "mushroom":
+          [[0, 0, 0.32, 0.17], [0.2, 0.1, 0.22, 0.12], [-0.15, 0.14, 0.18, 0.1], [0.08, -0.17, 0.14, 0.08]].forEach(([x, z, h, cr]) => {
+            const st = mesh(new T.CylinderGeometry(cr * 0.35, cr * 0.45, h, 12), mat("#f4ecdc")); st.position.set(x, h / 2, z); g.add(st);
+            const cap = mesh(new T.SphereGeometry(cr, 18, 10, 0, 6.29, 0, Math.PI / 2), mat("#d6483c")); cap.position.set(x, h - 0.01, z); cap.scale.y = 0.75; g.add(cap);
+            for (let i = 0; i < 5; i++) { const dt = mesh(new T.SphereGeometry(cr * 0.12, 8, 6), mat("#fffaf0")); const a = i * 1.26; dt.position.set(x + Math.cos(a) * cr * 0.6, h + cr * 0.42, z + Math.sin(a) * cr * 0.6); g.add(dt); }
+          }); r = 0.3; break;
+        case "cairn":
+          [[0.34, 0.11], [0.27, 0.1], [0.21, 0.09], [0.15, 0.08], [0.1, 0.07]].reduce((y, [w, hh], i) => { const st = mesh(new T.SphereGeometry(w, 14, 8), mat(STONE)); st.scale.y = hh / w * 1.6; st.position.set((i % 2 ? 0.02 : -0.02), y + hh * 0.8, 0); st.rotation.y = i; g.add(st); return y + hh * 1.55; }, 0);
+          r = 0.35; break;
+        case "chime": {
+          const post = mesh(new T.CylinderGeometry(0.035, 0.045, 1.5, 8), mat(BARK)); post.position.y = 0.75; g.add(post);
+          const arm = mesh(new T.BoxGeometry(0.4, 0.04, 0.04), mat(BARK)); arm.position.set(0.18, 1.45, 0); g.add(arm);
+          chimeStrip = new T.Group(); chimeStrip.position.set(0.34, 1.43, 0);
+          const bell = mesh(new T.SphereGeometry(0.08, 16, 10, 0, 6.29, 0, 1.9), mat("#b98a3c", { metalness: 0.6, roughness: 0.35, side: T.DoubleSide })); bell.position.y = -0.08; chimeStrip.add(bell);
+          const strip = mesh(new T.BoxGeometry(0.07, 0.24, 0.005), mat("#f4f0e4")); strip.position.y = -0.28; chimeStrip.add(strip);
+          const tie = mesh(new T.CylinderGeometry(0.004, 0.004, 0.12, 4), mat("#9a2c2c")); tie.position.y = -0.14; chimeStrip.add(tie);
+          g.add(chimeStrip); g.userData.chime = true; r = 0.25; break;
+        }
+        case "lamp": {
+          const post = mesh(new T.CylinderGeometry(0.03, 0.04, 1.3, 8), mat(BARK)); post.position.y = 0.65; g.add(post);
+          const arm = mesh(new T.BoxGeometry(0.32, 0.035, 0.035), mat(BARK)); arm.position.set(0.14, 1.27, 0); g.add(arm);
+          const lmat = new T.MeshStandardMaterial({ color: lin("#e2553f"), emissive: lin("#ff8a4c"), emissiveIntensity: 0, roughness: 0.7 });
+          const paper = mesh(new T.SphereGeometry(0.15, 18, 12), lmat); paper.scale.y = 1.25; paper.position.set(0.28, 1.02, 0); g.add(paper);
+          for (const y of [0.83, 1.21]) { const rim = mesh(new T.CylinderGeometry(0.08, 0.08, 0.03, 12), mat("#3a2a20")); rim.position.set(0.28, y, 0); g.add(rim); }
+          const gl = glow("#ffb070", 1.8, 0); gl.position.set(0.28, 1.02, 0); g.add(gl);
+          decorGlows.push({ sprite: gl, mat: lmat }); r = 0.25; break;
+        }
+        case "bench": {
+          for (let i = 0; i < 3; i++) { const b = mesh(new T.BoxGeometry(0.9, 0.035, 0.09), mat(i % 2 ? "#9c6b45" : "#a87650")); b.position.set(0, 0.36, -0.1 + i * 0.1); g.add(b); }
+          for (let i = 0; i < 2; i++) { const b = mesh(new T.BoxGeometry(0.9, 0.08, 0.03), mat("#9c6b45")); b.position.set(0, 0.55 + i * 0.12, -0.17); b.rotation.x = -0.12; g.add(b); }
+          for (const x of [-0.38, 0.38]) for (const z of [-0.12, 0.12]) { const l = mesh(new T.BoxGeometry(0.05, 0.36, 0.05), mat("#6b4f3a")); l.position.set(x, 0.18, z); g.add(l); }
+          for (const x of [-0.38, 0.38]) { const l = mesh(new T.BoxGeometry(0.05, 0.4, 0.04), mat("#6b4f3a")); l.position.set(x, 0.56, -0.17); g.add(l); }
+          r = 0.5; break;
+        }
+        case "birdhouse": {
+          const post = mesh(new T.CylinderGeometry(0.035, 0.045, 1.1, 8), mat(BARK)); post.position.y = 0.55; g.add(post);
+          const box = mesh(new T.BoxGeometry(0.26, 0.26, 0.24), mat("#e9d6b0")); box.position.y = 1.22; g.add(box);
+          const roof = mesh(new T.ConeGeometry(0.25, 0.18, 4), mat("#5d7fa6")); roof.position.y = 1.44; roof.rotation.y = Math.PI / 4; g.add(roof);
+          const hole = mesh(new T.CircleGeometry(0.045, 16), mat("#3a2a20")); hole.position.set(0, 1.24, 0.121); g.add(hole);
+          const perch = mesh(new T.CylinderGeometry(0.01, 0.01, 0.08, 6), mat(BARK)); perch.rotation.x = Math.PI / 2; perch.position.set(0, 1.16, 0.15); g.add(perch);
+          const bird = new T.Group(); bird.position.set(0.05, 1.53, 0.02);
+          const bb = mesh(new T.SphereGeometry(0.06, 14, 10), mat("#7aa6c8")); bb.scale.set(1, 0.9, 1.3); bird.add(bb);
+          const bh = mesh(new T.SphereGeometry(0.04, 12, 8), mat("#7aa6c8")); bh.position.set(0, 0.04, 0.06); bird.add(bh);
+          const beak = mesh(new T.ConeGeometry(0.012, 0.04, 6), mat("#f2b33c")); beak.rotation.x = Math.PI / 2; beak.position.set(0, 0.04, 0.11); bird.add(beak);
+          const belly = mesh(new T.SphereGeometry(0.045, 10, 8), mat("#f3e2c6")); belly.position.set(0, -0.01, 0.04); bird.add(belly);
+          g.add(bird); g.userData.bird = bird; r = 0.25; break;
+        }
+        case "pond": {
+          const water = mesh(new T.CylinderGeometry(0.55, 0.55, 0.04, 36), new T.MeshStandardMaterial({ color: lin("#4f8fc4"), roughness: 0.1, metalness: 0.25 }), false); water.position.y = 0.01; g.add(water);
+          for (let i = 0; i < 14; i++) { const a = i / 14 * 6.283; const st = mesh(new T.SphereGeometry(0.09 + (i % 3) * 0.02, 10, 6), mat(STONE)); st.scale.y = 0.55; st.position.set(Math.cos(a) * 0.6, 0.03, Math.sin(a) * 0.6); g.add(st); }
+          for (const [x, z, rr] of [[0.2, 0.1, 0.12], [-0.18, -0.15, 0.1]]) { const pad = mesh(new T.CylinderGeometry(rr, rr, 0.012, 20, 1, false, 0.3, 5.8), mat("#5f9e5a")); pad.position.set(x, 0.04, z); g.add(pad); }
+          const lot = new T.Group(); lot.position.set(0.2, 0.05, 0.1); petalRing(lot, 7, 0.06, 0.025, "#f7b8cf", 0.6); g.add(lot);
+          r = 0.65; break;
+        }
+        case "arch": {
+          const arc = mesh(new T.TorusGeometry(0.62, 0.035, 8, 36, Math.PI), mat("#8a6a4a")); arc.position.y = 0.9; g.add(arc);
+          for (const x of [-0.62, 0.62]) { const leg = mesh(new T.CylinderGeometry(0.035, 0.04, 0.9, 8), mat("#8a6a4a")); leg.position.set(x, 0.45, 0); g.add(leg); }
+          const cols = ["#f4a6c0", "#fff1f5", "#f6c431", "#c9a0e6", "#ff8c69"];
+          for (let i = 0; i < 26; i++) {
+            const t = i / 25, a = Math.PI * t, onLeg = i < 4 || i > 21;
+            const px = onLeg ? (i < 4 ? -0.62 : 0.62) : Math.cos(a) * 0.62, py = onLeg ? 0.25 + (i < 4 ? i : 25 - i) * 0.17 : 0.9 + Math.sin(a) * 0.62;
+            const f = mesh(new T.SphereGeometry(0.05 + (i % 3) * 0.012, 10, 8), mat(cols[i % cols.length])); f.position.set(px + (Math.random() - 0.5) * 0.04, py, (i % 2 ? 0.04 : -0.04)); g.add(f);
+            if (i % 2) { const lf = mesh(new T.SphereGeometry(1, 8, 6), mat(LEAF)); lf.scale.set(0.06, 0.015, 0.035); lf.position.set(px, py - 0.05, i % 4 ? 0.06 : -0.06); g.add(lf); }
+          }
+          g.userData.archLegs = true; r = 0; break;
+        }
+      }
+      g.userData.r = r; return g;
+    }
+    function syncDecor() {
+      const owned = (profile && profile.decor) || {}, shownIds = DECOR.map(d => d.id).filter(id => owned[id] && owned[id].shown);
+      const key = shownIds.join(",") + "|" + islandR;
+      if (key === decorKey) return;
+      decorKey = key;
+      if (decorGroup) world.remove(decorGroup);
+      decorObstacles.length = 0; decorGlows.length = 0; chimeStrip = null;
+      decorGroup = new T.Group();
+      for (const id of shownIds) {
+        const [ang, rf] = DECOR_SPOT[id], d = buildDecor(id);
+        const x = Math.cos(ang) * islandR * rf, z = Math.sin(ang) * islandR * rf;
+        d.position.set(x, 0, z);
+        d.rotation.y = id === "arch" ? -ang + Math.PI / 2 : -ang - Math.PI / 2;
+        if (d.userData.archLegs) { const sx = -Math.sin(ang) * 0.62, sz = Math.cos(ang) * 0.62; decorObstacles.push({ x: x + sx, z: z + sz, r: 0.15 }, { x: x - sx, z: z - sz, r: 0.15 }); }
+        else decorObstacles.push({ x, z, r: d.userData.r });
+        d.traverse(o => { o.userData.decor = id; });
+        decorGroup.add(d);
+      }
+      world.add(decorGroup); applySky();
+    }
+
+    // ---- shimmering petals to collect ----
+    const collects = []; let nextSpawn = performance.now() + 8000;
+    const hitMat = new T.MeshBasicMaterial({ visible: false });
+    const COLLECT_LOOK = { spring: ["#ffb3cc", "petal"], summer: ["#fff6c8", "fluff"], autumn: ["#ffc34a", "leaf"], winter: ["#cfe9ff", "flake"] };
+    function spawnCollect() {
+      const [col, kind] = COLLECT_LOOK[seasonKey] || COLLECT_LOOK.spring;
+      const c = new T.Group();
+      const geo = kind === "flake" ? new T.OctahedronGeometry(0.1, 0) : kind === "fluff" ? new T.SphereGeometry(0.07, 12, 8) : new T.SphereGeometry(1, 14, 8);
+      const body = new T.Mesh(geo, new T.MeshStandardMaterial({ color: lin(col), emissive: lin(col), emissiveIntensity: 0.6, roughness: 0.4 }));
+      if (kind === "petal" || kind === "leaf") body.scale.set(kind === "leaf" ? 0.13 : 0.1, 0.02, kind === "leaf" ? 0.09 : 0.07);
+      const halo = glow(col, 0.9, 0.85);
+      const hit = new T.Mesh(new T.SphereGeometry(0.55, 8, 6), hitMat);
+      c.add(body, halo, hit);
+      const a = Math.random() * 6.283, d = Math.sqrt(Math.random()) * islandR * 0.8;
+      c.position.set(Math.cos(a) * d, 5 + Math.random() * 1.5, Math.sin(a) * d);
+      c.userData = { collect: true, phase: Math.random() * 6.28, halo, body, born: performance.now(), dying: 0 };
+      c.traverse(o => { o.userData.collect = c; });
+      collects.push(c); scene.add(c);
+    }
+    function stepCollects(dt, now) {
+      if (now > nextSpawn) {
+        nextSpawn = now + 14000 + Math.random() * 18000;
+        if (collects.length < 2 && collectLeft()) spawnCollect();
+      }
+      for (let i = collects.length - 1; i >= 0; i--) {
+        const c = collects[i], u = c.userData;
+        if (u.dying) {
+          const k = Math.min(1, (now - u.dying) / 450);
+          u.halo.scale.setScalar(0.9 + k * 2.2); u.halo.material.opacity = 0.85 * (1 - k); u.body.visible = false;
+          c.position.y += dt * 1.2;
+          if (k >= 1) { scene.remove(c); collects.splice(i, 1); }
+          continue;
+        }
+        c.position.y -= dt * 0.3;
+        if (!reduce.matches) { c.position.x += Math.sin(now / 900 + u.phase) * dt * 0.35; c.position.z += Math.cos(now / 1100 + u.phase) * dt * 0.25; u.body.rotation.x += dt * 1.6; u.body.rotation.z += dt * 1.1; }
+        u.halo.material.opacity = 0.55 + 0.35 * Math.sin(now / 300 + u.phase);
+        if (c.position.y < 0.12) { u.halo.material.opacity *= 0.95; if (c.position.y < -0.2) { scene.remove(c); collects.splice(i, 1); } }
+      }
     }
 
     // ---- water drops & fireflies ----
@@ -1908,6 +2166,7 @@ ${lines}
       cloudMat.color.copy(lin(s.night ? "#3b4252" : skyKey === "dusk" ? "#f6dcdc" : skyKey === "dawn" ? "#fff0ea" : "#ffffff")); cloudMat.opacity = s.night ? 0.55 : 0.9;
       renderer.toneMappingExposure = s.night ? 1.25 : 1.12;
       if (lanternGlow) lanternGlow.material.opacity = s.night ? 0.95 : skyKey === "dusk" ? 0.4 : 0;
+      for (const dg of decorGlows) { dg.sprite.material.opacity = s.night ? 0.9 : skyKey === "dusk" ? 0.35 : 0; dg.mat.emissiveIntensity = s.night ? 1.6 : skyKey === "dusk" ? 0.6 : 0; }
       for (const p of plants.values()) if (p.group.userData.glow) p.group.userData.glow.material.opacity = s.night ? 0.5 : skyKey === "dusk" ? 0.15 : 0;
       flies.visible = s.night;
       lanternMat.emissiveIntensity = s.night ? 1.4 : skyKey === "dusk" ? 0.6 : 0;
@@ -1979,6 +2238,7 @@ ${lines}
       const R = Math.max(4.5, Math.ceil(spacing * Math.sqrt(sorted.length + 1) + 1.8));
       if (R !== islandR) { buildIsland(R); buildFlies(R); applySeason(); }
       syncBirthIslet();
+      syncDecor();
       const seen = new Set();
       sorted.forEach((e, i) => {
         seen.add(e.id);
@@ -2019,9 +2279,11 @@ ${lines}
       const rect = renderer.domElement.getBoundingClientRect();
       ndc.set(((ev.clientX - rect.left) / rect.width) * 2 - 1, -((ev.clientY - rect.top) / rect.height) * 2 + 1);
       ray.setFromCamera(ndc, camera);
-      const targets = mode === "orbit" ? [...pathStones] : []; if (mailbox) targets.push(mailbox); if (birthIslet) targets.push(birthIslet); for (const p of plants.values()) { targets.push(p.group); if (p.drop) targets.push(p.drop); }
+      const targets = mode === "orbit" ? [...pathStones] : []; if (mailbox) targets.push(mailbox); if (birthIslet) targets.push(birthIslet); if (decorGroup) targets.push(decorGroup); collects.forEach(c => { if (!c.userData.dying) targets.unshift(c); }); for (const p of plants.values()) { targets.push(p.group); if (p.drop) targets.push(p.drop); }
       const hit = ray.intersectObjects(targets, true)[0];
       if (hit && hit.object.userData.path) { enterWalk(); return; }
+      if (hit && hit.object.userData.collect && hit.object.userData.collect.userData) { const c = hit.object.userData.collect; if (!c.userData.dying && collectPetal()) c.userData.dying = performance.now(); return; }
+      if (hit && hit.object.userData.decor) { const d = DECOR.find(x => x.id === hit.object.userData.decor); if (d.id === "chime") { Music.sfx("chime"); chimeKick = performance.now(); } showTip(`${d.icon} ${d.name}`, true); return; }
       if (hit && hit.object.userData.birthday) { openBirthdayCard(); return; }
       if (hit && hit.object.userData.mailbox) { if (!openMailbox()) showTip("아직 편지가 없어요. 꽃을 피우면 정원지기가 편지를 보내요"); return; }
       const id = hit && hit.object.userData.entryId;
@@ -2176,7 +2438,7 @@ ${lines}
           const dx = walker.x - p.group.position.x, dz = walker.z - p.group.position.z, d = Math.hypot(dx, dz), min = 0.42;
           if (d < min && d > 1e-4) { walker.x = p.group.position.x + dx / d * min; walker.z = p.group.position.z + dz / d * min; }
         }
-        for (const o of obstacles) {
+        for (const o of obstacles.concat(decorObstacles)) {
           const dx = walker.x - o.x, dz = walker.z - o.z, d = Math.hypot(dx, dz);
           if (d < o.r && d > 1e-4) { walker.x = o.x + dx / d * o.r; walker.z = o.z + dz / d * o.r; }
         }
@@ -2198,7 +2460,7 @@ ${lines}
     let visible = true;
     new IntersectionObserver(es => { visible = es[0].isIntersecting; }).observe(host);
     const easeOutBack = x => 1 + 2.2 * Math.pow(x - 1, 3) + 1.2 * Math.pow(x - 1, 2);
-    let lastNow = 0, perf = { frames: 0, time: 0 };
+    let lastNow = 0, perf = { frames: 0, time: 0 }, chimeKick = 0;
     function lowerQuality() {
       renderer.setPixelRatio(1); resize();
       sun.shadow.mapSize.set(512, 512); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
@@ -2220,6 +2482,8 @@ ${lines}
       }
       const dt = Math.min(0.05, (now - (lastNow || now)) / 1000); lastNow = now;
       stepFall(dt, now);
+      stepCollects(dt, now);
+      if (chimeStrip) { const kick = chimeKick ? Math.max(0, 1 - (now - chimeKick) / 2500) : 0; chimeStrip.rotation.z = (reduce.matches ? 0 : Math.sin(now / 700) * 0.12) + Math.sin(now / 120) * 0.35 * kick; }
       if (!reduce.matches) {
         for (const f of floaters) { f.position.y = f.userData.baseY + Math.sin(now / 2200 + f.userData.phase) * 0.18; f.rotation.y += dt * 0.06; }
         if (birthIslet) { birthIslet.position.y = birthIslet.userData.baseY + Math.sin(now / 2600) * 0.15; }
@@ -2388,6 +2652,8 @@ ${lines}
       if (name === "water") for (let i = 0; i < 3; i++) tone(1300 - i * 180, t + i * 0.11, 0.18, { gain: 0.06, attack: 0.004, bus: sfxBus, glideTo: 420 - i * 40, pan: (i - 1) * 0.3 });
       if (name === "plant") { tone(mtof(r - 12), t, 0.6, { type: "triangle", gain: 0.08, bus: sfxBus }); tone(mtof(r + key.steps[2]), t + 0.12, 1.6, { gain: 0.06, bus: sfxBus, toDelay: true }); }
       if (name === "bloom") key.steps.concat([12, 14]).forEach((st, i) => tone(mtof(r + st), t + i * 0.09, 1.8, { gain: 0.06, bus: sfxBus, toDelay: true, pan: (i / 6) - 0.5 }));
+      if (name === "collect") { tone(mtof(r + 24), t, 0.5, { gain: 0.05, bus: sfxBus, toDelay: true }); tone(mtof(r + 28), t + 0.07, 0.6, { gain: 0.04, bus: sfxBus, toDelay: true }); }
+      if (name === "chime") for (let i = 0; i < 4; i++) { const m = r + 12 + key.steps[Math.floor(Math.random() * key.steps.length)]; tone(mtof(m), t + i * 0.13 + Math.random() * 0.05, 2.6, { gain: 0.045, bus: sfxBus, toDelay: true, pan: Math.random() - 0.5 }); tone(mtof(m) * 2.76, t + i * 0.13, 0.8, { gain: 0.01, bus: sfxBus }); }
       if (name === "letter") { for (const [m, d] of [[r + 16, 0], [r + 11, 0.32]]) { tone(mtof(m), t + d, 2.4, { gain: 0.07, bus: sfxBus, toDelay: true }); tone(mtof(m) * 2.76, t + d, 0.8, { gain: 0.012, bus: sfxBus }); } }
     }
     return { sfx, isOn: () => on };
@@ -2417,6 +2683,7 @@ ${lines}
     renderLetters();
     renderWeek();
     renderBirthday();
+    renderWallet();
     if (openId && $("sheet").open) { const e = shown().find(x => x.id === openId); if (e) fillSheet(e); }
   }
   function chip(name, col, on, s) {
@@ -2444,7 +2711,7 @@ ${lines}
     const stage = stageOf(e);
     $("sheet-date").textContent = `${y}년 ${+m}월 ${+d}일` + (e.example ? " · 예시" : "");
     $("sheet-title").textContent = e.title;
-    $("sheet-stage").textContent = `${plantName(e.emotions[0].n)} · ${STAGES[stage]}` + (stage < 3 ? ` (꽃까지 물 ${3 - stage}번)` : "");
+    $("sheet-stage").textContent = `${plantName(e.emotions[0].n)} · ${STAGES[stage]}` + (stage < 3 ? (e.fast && stage === 0 ? " (곧 새싹이 돋아요)" : ` (꽃까지 물 ${watersLeft(e)}번)`) : "");
     $("sheet-note").hidden = !e.note; $("sheet-note").textContent = e.note || "";
     const emos = $("sheet-emos"); emos.textContent = "";
     for (const x of e.emotions) emos.append(chip(E[x.n][0], E[x.n][2], true, x.s));
