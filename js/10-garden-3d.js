@@ -927,7 +927,6 @@ function initGarden3D() {
     const body = new T.Mesh(bg, wMat); body.castShadow = true; whaleBody.add(body);
     for (const sx of [-1, 1]) { const fin = new T.Mesh(new T.SphereGeometry(1, 16, 10), mat("#5a7aa4")); fin.scale.set(0.3, 0.035, 0.12); fin.position.set(sx * 0.58, -0.2, -0.5); fin.rotation.set(0.2, sx * 0.5, sx * -0.45); whaleBody.add(fin);
       const eye = new T.Mesh(new T.SphereGeometry(0.045, 10, 8), mat("#1c2433")); eye.position.set(sx * 0.4, -0.02, -0.95); whaleBody.add(eye); }
-    for (let i = 0; i < 7; i++) { const gr = new T.Mesh(new T.TorusGeometry(0.3 - i * 0.012, 0.008, 4, 18, Math.PI * 0.5), mat("#c9d6e6")); gr.rotation.set(0, 0, Math.PI * 1.25); gr.position.set(0, -0.12 - i * 0.002, -0.95 + i * 0.1); gr.scale.set(1.4, 0.9, 1); whaleBody.add(gr); }
     whaleTail.position.set(0, 0.02, 1.42); whaleBody.add(whaleTail);
     for (const sx of [-1, 1]) { const fl = new T.Mesh(new T.SphereGeometry(1, 18, 10), mat("#3d6294")); fl.scale.set(0.42, 0.035, 0.17); fl.position.set(sx * 0.34, 0, 0.16); fl.rotation.y = sx * 0.45; whaleTail.add(fl); }
     const spots = new T.Group();
