@@ -44,7 +44,7 @@
 }
 [hidden] { display: none !important; }
 html { background: var(--bg); }
-body {
+body { word-break: keep-all; overflow-wrap: break-word;
   background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.65;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
