@@ -1,4 +1,4 @@
-// 감정정원 · 3D 미니어처 섬: 식물, 소품, 하늘 친구들, 날씨, 산책 모드
+// 감정정원 · 3D 미니어처 섬: 섬, 하늘과 날씨, 하늘 친구들, 정원지기, 계절, 식물 심기, 누르기, 산책 모드
 // (js/ 폴더의 파일들은 번호 순서대로 불러와요. 앞 파일에서 만든 이름을 뒤 파일에서 그대로 써요.)
 
 // ---------- Miniature 3D garden ----------
@@ -53,8 +53,8 @@ function initGarden3D() {
   renderer.outputEncoding = T.sRGBEncoding;
   renderer.toneMapping = T.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.12;
   host.append(renderer.domElement);
-  const lin = c => new T.Color(c).convertSRGBToLinear();
-  const coarse = matchMedia("(pointer: coarse)").matches;
+  const K = make3DKit(T, renderer);
+  const { lin, coarse, mat, mesh, BARK, LEAF, SOIL, SOIL_DARK, GRASS, STONE, grassTex, grassTopMat, soilSideMat, bladeMat, tmpObj, glow, rnd, stemTube, leafMesh, addLeaf, petalRing, bladeLeaf } = K;
 
   const scene = new T.Scene();
   const camera = new T.PerspectiveCamera(38, 1, 0.1, 300);
@@ -75,46 +75,6 @@ function initGarden3D() {
   Object.assign(sun.shadow.camera, { left: -16, right: 16, top: 16, bottom: -16, near: 1, far: 50 });
   scene.add(sun);
 
-  const matCache = new Map();
-  const mat = (c, opts) => {
-    const key = c + JSON.stringify(opts || {});
-    if (!opts && SPECIAL[c]) return SPECIAL[c];
-    if (!matCache.has(key)) { const m0 = new T.MeshStandardMaterial(Object.assign({ color: lin(c), roughness: 0.78, flatShading: c === SOIL_DARK }, opts || {})); m0.userData.hex = c; matCache.set(key, m0); }
-    return matCache.get(key);
-  };
-  const mesh = (geo, m, shadow = true) => { const o = new T.Mesh(geo, m); o.castShadow = shadow; o.receiveShadow = true; return o; };
-  const BARK = "#6b4f3a", LEAF = "#5b8a5e", SOIL = "#7a634a", SOIL_DARK = "#5e4a37", GRASS = "#86b37a", STONE = "#a7a69b";
-  // painted textures, drawn once on canvases (grey-scale so material colours tint them)
-  function canvasTex(size, draw, rep) {
-    const c = document.createElement("canvas"); c.width = c.height = size; draw(c.getContext("2d"), size);
-    const t = new T.CanvasTexture(c); t.wrapS = t.wrapT = T.RepeatWrapping; if (rep) t.repeat.set(rep[0], rep[1]);
-    t.encoding = T.sRGBEncoding; t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1); return t;
-  }
-  let tSeed = 7; const tr = () => (tSeed = (tSeed * 16807) % 2147483647) / 2147483647;
-  const grassTex = canvasTex(512, (x, n) => {
-    x.fillStyle = "#e9e9e9"; x.fillRect(0, 0, n, n);
-    for (let i = 0; i < 2600; i++) { const v = Math.round(212 + tr() * 43); x.strokeStyle = `rgb(${v},${v},${v})`; x.lineWidth = 1 + tr() * 1.5; const px = tr() * n, py = tr() * n, a = -1.57 + (tr() - 0.5) * 0.9, l = 3 + tr() * 7; x.beginPath(); x.moveTo(px, py); x.lineTo(px + Math.cos(a) * l, py + Math.sin(a) * l); x.stroke(); }
-    for (let i = 0; i < 40; i++) { const v = Math.round(205 + tr() * 50); x.fillStyle = `rgba(${v},${v},${v},0.35)`; x.beginPath(); x.arc(tr() * n, tr() * n, 10 + tr() * 30, 0, 7); x.fill(); }
-  });
-  const soilTex = canvasTex(256, (x, n) => {
-    for (let y = 0; y < n; y += 4) { const v = Math.round(185 + tr() * 55); x.fillStyle = `rgb(${v},${v},${v})`; x.fillRect(0, y, n, 4); }
-    for (let i = 0; i < 260; i++) { const v = Math.round(150 + tr() * 105); x.fillStyle = `rgb(${v},${v},${v})`; x.beginPath(); x.ellipse(tr() * n, tr() * n, 1.5 + tr() * 4, 1 + tr() * 2.5, 0, 0, 7); x.fill(); }
-  }, [10, 1]);
-  const stoneTex = canvasTex(256, (x, n) => {
-    x.fillStyle = "#dedede"; x.fillRect(0, 0, n, n);
-    for (let i = 0; i < 500; i++) { const v = Math.round(170 + tr() * 85); x.fillStyle = `rgba(${v},${v},${v},0.6)`; x.beginPath(); x.arc(tr() * n, tr() * n, 2 + tr() * 9, 0, 7); x.fill(); }
-  });
-  const grassTopMat = new T.MeshStandardMaterial({ color: lin(GRASS), map: grassTex, roughness: 0.95 });
-  const soilSideMat = new T.MeshStandardMaterial({ color: lin(SOIL), map: soilTex, roughness: 0.95 });
-  const bladeMat = new T.MeshStandardMaterial({ color: lin(GRASS), roughness: 0.9 });
-  const SPECIAL = { [STONE]: new T.MeshStandardMaterial({ color: lin(STONE), map: stoneTex, roughness: 0.9, flatShading: true }) };
-  const tmpObj = new T.Object3D();
-  const glowTex = canvasTex(128, (x, n) => { const g = x.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2); g.addColorStop(0, "rgba(255,255,255,1)"); g.addColorStop(0.22, "rgba(255,255,255,0.5)"); g.addColorStop(0.55, "rgba(255,255,255,0.12)"); g.addColorStop(1, "rgba(255,255,255,0)"); x.fillStyle = g; x.fillRect(0, 0, n, n); });
-  function glow(color, size, opacity) {
-    const sp = new T.Sprite(new T.SpriteMaterial({ map: glowTex, color: lin(color), transparent: true, opacity, blending: T.AdditiveBlending, depthWrite: false }));
-    sp.scale.set(size, size, 1); sp.raycast = () => {}; return sp;
-  }
-  const rnd = (seed) => { let s = Math.floor(hash(seed) * 2 ** 31) || 1; return () => (s = (s * 16807) % 2147483647) / 2147483647; };
 
   // ---- island ----
   const world = new T.Group(); scene.add(world);
@@ -252,380 +212,9 @@ function initGarden3D() {
   const lanternLight = new T.PointLight(lin(0xffc46b), 0, 8, 2); scene.add(lanternLight);
   let lanternGlow = null;
 
-  // ---- plant builders (base at y = 0) ----
-  function stemTube(h, bend, r = 0.035, to) {
-    const end = to || new T.Vector3(0, h, 0);
-    const curve = new T.QuadraticBezierCurve3(new T.Vector3(0, 0, 0), new T.Vector3(bend, h * 0.5, 0), end);
-    return { m: mesh(new T.TubeGeometry(curve, 12, r, 7, false), mat(LEAF)), curve };
-  }
-  function leafMesh(size, col) { const l = mesh(new T.SphereGeometry(1, 14, 8), mat(col || LEAF)); l.scale.set(size * 0.45, size * 0.08, size * 0.2); return l; }
-  function addLeaf(g, y, ang, size, col) { const l = leafMesh(size, col); l.position.set(Math.cos(ang) * size * 0.35, y, Math.sin(ang) * size * 0.35); l.rotation.set(0, -ang, 0.45); g.add(l); }
+  function buildPlant(e) { return buildPlant3D(K, e); }
 
-  function buildPlant(e) {
-    const g = new T.Group();
-    const main = e.emotions[0], fam = E[main.n][1], c = E[main.n][2];
-    const acc = e.emotions[1] ? E[e.emotions[1].n][2] : null;
-    const k = 0.62 + main.s * 0.13, stage = stageOf(e), r = rnd(e.id || e.title);
-    let top = 0.3;
-    if (stage === 0) {
-      const mound = mesh(new T.SphereGeometry(0.3, 10, 6, 0, 6.29, 0, Math.PI / 2), mat(SOIL)); mound.scale.y = 0.45; g.add(mound);
-      const seed = mesh(new T.SphereGeometry(0.09, 8, 6), mat(c)); seed.scale.set(0.8, 1.2, 0.8); seed.position.y = 0.16; seed.rotation.z = 0.5; g.add(seed);
-      top = 0.3;
-    } else if (stage === 1) {
-      const mound = mesh(new T.SphereGeometry(0.24, 10, 6, 0, 6.29, 0, Math.PI / 2), mat(SOIL)); mound.scale.y = 0.35; g.add(mound);
-      const s = stemTube(0.42, 0.03); g.add(s.m);
-      addLeaf(g, 0.42, 0.3, 0.38); addLeaf(g, 0.42, 0.3 + Math.PI, 0.38, c);
-      top = 0.55;
-    } else if (stage === 2) {
-      const h = 1.1 * k; g.add(stemTube(h, 0.06).m);
-      addLeaf(g, h * 0.35, r() * 6, 0.45); addLeaf(g, h * 0.55, r() * 6, 0.4);
-      const bud = mesh(new T.SphereGeometry(0.13 * k, 16, 12), mat(c)); bud.scale.y = 1.7; bud.position.y = h + 0.14 * k; g.add(bud);
-      for (let i = 0; i < 3; i++) { const sp = mesh(new T.ConeGeometry(0.05, 0.16, 4), mat(LEAF)); sp.position.set(Math.cos(i * 2.1) * 0.07, h + 0.02, Math.sin(i * 2.1) * 0.07); sp.rotation.set(Math.sin(i * 2.1) * 0.5, 0, -Math.cos(i * 2.1) * 0.5); g.add(sp); }
-      top = h + 0.4 * k;
-    } else {
-      switch (fam) {
-        case "daisy": {
-          const h = 1.5 * k; g.add(stemTube(h, 0.1).m); addLeaf(g, h * 0.3, r() * 6, 0.5); addLeaf(g, h * 0.5, r() * 6, 0.45);
-          const head = new T.Group(); head.position.y = h; head.rotation.x = 0.35;
-          const pr = 0.24 * k;
-          for (let i = 0; i < 11; i++) { const pt = mesh(new T.SphereGeometry(1, 14, 8), mat(c)); pt.scale.set(pr * 0.38, 0.035, pr * 0.9); const a = i / 11 * 6.283; pt.position.set(Math.sin(a) * pr, 0, Math.cos(a) * pr); pt.rotation.y = a; head.add(pt); }
-          const ctr = mesh(new T.SphereGeometry(pr * 0.45, 16, 10), mat(acc || "#7a5a2a")); ctr.scale.y = 0.55; head.add(ctr);
-          g.add(head); top = h + 0.35;
-          break;
-        }
-        case "tulip": {
-          const h = 1.35 * k; g.add(stemTube(h, -0.08).m); addLeaf(g, h * 0.2, 0.5, 0.65); addLeaf(g, h * 0.3, 3.6, 0.55);
-          const pts = [[0, 0], [0.11, 0.02], [0.17, 0.1], [0.18, 0.22], [0.15, 0.33], [0.1, 0.4]].map(([x, y]) => new T.Vector2(x * k * 1.3, y * k * 1.3));
-          const cup = mesh(new T.LatheGeometry(pts, 18), mat(c, { side: T.DoubleSide })); cup.position.y = h - 0.02; g.add(cup);
-          if (acc) { const in1 = mesh(new T.SphereGeometry(0.06 * k, 6, 5), mat(acc)); in1.position.y = h + 0.12 * k; g.add(in1); }
-          top = h + 0.6 * k;
-          break;
-        }
-        case "bell": {
-          const h = 1.45 * k, end = new T.Vector3(0.55 * k, h, 0);
-          const s = stemTube(h, -0.1, 0.035, end); g.add(s.m); addLeaf(g, h * 0.3, 3.1, 0.5);
-          const n = 1 + Math.ceil(main.s / 2);
-          for (let i = 0; i < n; i++) {
-            const p = s.curve.getPoint(0.55 + i * (0.45 / n));
-            const bell = mesh(new T.ConeGeometry(0.13 * k, 0.24 * k, 16, 1, true), mat(i === n - 1 && acc ? acc : c, { side: T.DoubleSide }));
-            bell.position.set(p.x + 0.02, p.y - 0.2 * k, p.z); g.add(bell);
-            const tip = mesh(new T.SphereGeometry(0.03, 5, 4), mat(c)); tip.position.set(p.x + 0.02, p.y - 0.06 * k, p.z); g.add(tip);
-          }
-          top = h + 0.2;
-          break;
-        }
-        case "fern": {
-          const n = 3 + Math.ceil(main.s / 2);
-          for (let f = 0; f < n; f++) {
-            const fr = new T.Group(); fr.rotation.y = f / n * 6.283 + r() * 0.4; fr.rotation.z = 0;
-            const L = (1.1 + r() * 0.3) * k;
-            const curve = new T.QuadraticBezierCurve3(new T.Vector3(0, 0, 0), new T.Vector3(L * 0.15, L * 0.75, 0), new T.Vector3(L * 0.6, L * 0.95, 0));
-            fr.add(mesh(new T.TubeGeometry(curve, 8, 0.02, 4, false), mat(LEAF)));
-            for (let q = 2; q < 10; q++) {
-              const t = q / 10, p = curve.getPoint(t), sz = 0.16 * (1 - t) + 0.05;
-              for (const side of [-1, 1]) { const lf = mesh(new T.SphereGeometry(1, 5, 4), mat(f % 2 && acc ? acc : c)); lf.scale.set(sz, 0.02, 0.04); lf.position.set(p.x, p.y, side * sz * 0.9); lf.rotation.y = side * 0.4; fr.add(lf); }
-            }
-            g.add(fr);
-          }
-          top = 1.2 * k;
-          break;
-        }
-        case "thorn": {
-          const h = 1.2 * k, w = 0.2 * k;
-          const body = mesh(new T.CylinderGeometry(w * 0.9, w, h, 14), mat(LEAF)); body.position.y = h / 2; g.add(body);
-          const cap = mesh(new T.SphereGeometry(w * 0.9, 8, 5, 0, 6.29, 0, Math.PI / 2), mat(LEAF)); cap.position.y = h; g.add(cap);
-          const arm = mesh(new T.CylinderGeometry(w * 0.55, w * 0.6, h * 0.4, 7), mat(LEAF)); arm.position.set(w * 1.3, h * 0.55, 0); g.add(arm);
-          const armJ = mesh(new T.CylinderGeometry(w * 0.5, w * 0.5, w * 1.3, 6), mat(LEAF)); armJ.rotation.z = Math.PI / 2; armJ.position.set(w * 0.75, h * 0.38, 0); g.add(armJ);
-          for (let i = 0; i < 14; i++) { const a = i * 2.4, y = 0.15 + (i / 14) * h * 0.85; const sp = mesh(new T.ConeGeometry(0.02, 0.12, 3), mat(c)); sp.position.set(Math.cos(a) * w, y, Math.sin(a) * w); sp.rotation.set(0, 0, 0); sp.lookAt(new T.Vector3(Math.cos(a) * 3, y, Math.sin(a) * 3)); sp.rotateX(Math.PI / 2); g.add(sp); }
-          for (let i = 0; i < 5; i++) { const a = i / 5 * 6.283; const pt = mesh(new T.SphereGeometry(1, 6, 4), mat(c)); pt.scale.set(0.05, 0.03, 0.12); pt.position.set(Math.sin(a) * 0.1, h + w * 0.9, Math.cos(a) * 0.1); pt.rotation.y = a; g.add(pt); }
-          if (acc) { const ct = mesh(new T.SphereGeometry(0.05, 6, 4), mat(acc)); ct.position.y = h + w * 0.95; g.add(ct); }
-          top = h + w + 0.2;
-          break;
-        }
-        case "moss": {
-          const rk = mesh(new T.IcosahedronGeometry(0.42 * k, 0), mat(STONE)); rk.scale.y = 0.6; rk.position.y = 0.12; rk.rotation.y = r() * 3; g.add(rk);
-          const moss = mesh(new T.SphereGeometry(0.4 * k, 18, 10, 0, 6.29, 0, Math.PI / 2), mat(c)); moss.scale.y = 0.55; moss.position.y = 0.2 * k; g.add(moss);
-          for (let i = 0; i < 6; i++) { const d = mesh(new T.SphereGeometry(0.035, 5, 4), mat(acc || LEAF)); const a = r() * 6.28, rr = r() * 0.3 * k; d.position.set(Math.cos(a) * rr, 0.2 * k + 0.2 * k * (1 - rr / (0.35 * k)), Math.sin(a) * rr); g.add(d); }
-          const sp = stemTube(0.3, 0.05, 0.02); sp.m.position.set(0.1, 0.3 * k, 0); g.add(sp.m);
-          top = 0.55 * k + 0.2;
-          break;
-        }
-        case "willow": {
-          const h = 1.5 * k; g.add(stemTube(h, 0.05, 0.05).m);
-          const n = 7 + main.s;
-          for (let i = 0; i < n; i++) {
-            const a = i / n * 6.283 + r() * 0.3, spread = (0.3 + r() * 0.25) * k, drop = (0.7 + r() * 0.4) * k;
-            const curve = new T.QuadraticBezierCurve3(new T.Vector3(0, h, 0), new T.Vector3(Math.cos(a) * spread * 0.8, h + 0.18, Math.sin(a) * spread * 0.8), new T.Vector3(Math.cos(a) * spread, h - drop, Math.sin(a) * spread));
-            g.add(mesh(new T.TubeGeometry(curve, 10, 0.018, 4, false), mat(i % 3 === 0 && acc ? acc : c)));
-          }
-          top = h + 0.3;
-          break;
-        }
-        case "vine": {
-          // a morning-glory-like vine winding up a little bamboo stake
-          const h = 1.45 * k;
-          const stake = mesh(new T.CylinderGeometry(0.025, 0.03, h + 0.15, 8), mat("#b89a6a")); stake.position.y = (h + 0.15) / 2; g.add(stake);
-          const turns = 2.6, pts = [];
-          for (let i = 0; i <= 60; i++) { const t = i / 60, a = t * turns * 6.283; pts.push(new T.Vector3(Math.cos(a) * 0.09, t * h, Math.sin(a) * 0.09)); }
-          const helix = new T.CatmullRomCurve3(pts);
-          g.add(mesh(new T.TubeGeometry(helix, 80, 0.016, 6, false), mat(LEAF)));
-          for (let i = 0; i < 7; i++) {
-            const t = 0.12 + i * 0.12, p = helix.getPoint(t), a = t * turns * 6.283;
-            const lf = mesh(new T.SphereGeometry(1, 12, 8), mat(LEAF)); lf.scale.set(0.1, 0.015, 0.075);
-            lf.position.set(p.x + Math.cos(a) * 0.07, p.y, p.z + Math.sin(a) * 0.07); lf.rotation.set(0, -a, 0.5); g.add(lf);
-          }
-          const nf = 1 + Math.ceil(main.s / 2);
-          for (let i = 0; i < nf; i++) {
-            const t = 0.45 + i * (0.5 / nf), p = helix.getPoint(t), a = t * turns * 6.283 + 0.6;
-            const fl = new T.Group(); fl.position.set(p.x + Math.cos(a) * 0.1, p.y, p.z + Math.sin(a) * 0.1);
-            fl.lookAt(new T.Vector3(Math.cos(a) * 3, p.y + 1.2, Math.sin(a) * 3));
-            const trumpet = mesh(new T.ConeGeometry(0.13 * k, 0.18 * k, 18, 1, true), mat(i === nf - 1 && acc ? acc : c, { side: T.DoubleSide }));
-            trumpet.rotation.x = -Math.PI / 2; trumpet.position.z = 0.05; fl.add(trumpet);
-            const throat = mesh(new T.SphereGeometry(0.03, 10, 8), mat("#fff4d6")); throat.position.z = -0.03; fl.add(throat);
-            g.add(fl);
-          }
-          top = h + 0.2;
-          break;
-        }
-        case "sunflower": {
-          const h = 1.9 * k; g.add(stemTube(h, 0.12, 0.045).m);
-          for (const [y, a, sz] of [[0.3, 0.5, 0.7], [0.5, 3.4, 0.65], [0.7, 1.9, 0.55]]) addLeaf(g, h * y, a, sz);
-          const hd = new T.Group(); hd.position.y = h; hd.rotation.x = 0.95; g.add(hd);
-          const disk = mesh(new T.CylinderGeometry(0.15 * k, 0.15 * k, 0.05, 28), mat("#5a3a1e")); hd.add(disk);
-          for (let i = 0; i < 40; i++) { const a = i * 2.39996, rr = Math.sqrt(i / 40) * 0.13 * k; const sd = mesh(new T.SphereGeometry(0.012, 6, 4), mat(acc || "#3a2412")); sd.position.set(Math.cos(a) * rr, 0.03, Math.sin(a) * rr); hd.add(sd); }
-          petalRing(hd, 18, 0.13 * k, 0.04 * k, c, 0.12, 0, 0, 0.02); petalRing(hd, 18, 0.12 * k, 0.038 * k, c, 0.3, -0.01, 0.17, 0.02);
-          top = h + 0.25; break;
-        }
-        case "camellia": {
-          const h = 0.9 * k; g.add(stemTube(h, 0.05, 0.04).m);
-          const glossy = mat("#2f5d3a", { roughness: 0.35 });
-          for (let i = 0; i < 9; i++) { const lf = mesh(new T.SphereGeometry(1, 14, 8), glossy); lf.scale.set(0.16, 0.03, 0.08); const a = i * 2.1, y = h * (0.45 + (i % 4) * 0.15); lf.position.set(Math.cos(a) * 0.13, y, Math.sin(a) * 0.13); lf.rotation.set(0.3, -a, 0.35); g.add(lf); }
-          const spots = [[0, h + 0.05, 0], [0.16, h * 0.8, 0.08], [-0.14, h * 0.7, -0.06]].slice(0, 1 + Math.ceil(main.s / 2));
-          spots.forEach(([x, y, z], i) => { const hd = new T.Group(); hd.position.set(x, y, z); hd.rotation.set(-0.3 + i * 0.4, i, 0); g.add(hd);
-            petalRing(hd, 6, 0.1 * k, 0.07 * k, c, 0.5, 0, 0, 0.025); petalRing(hd, 5, 0.075 * k, 0.055 * k, i === 0 && acc ? acc : c, 0.95, 0.015, 0.5, 0.025);
-            for (let j = 0; j < 7; j++) { const st = mesh(new T.CylinderGeometry(0.004, 0.004, 0.05, 4), mat("#f6d36a")); const a = j / 7 * 6.283; st.position.set(Math.cos(a) * 0.015, 0.035, Math.sin(a) * 0.015); hd.add(st); } });
-          top = h + 0.25; break;
-        }
-        case "starflower": {
-          const h = 1.35 * k; g.add(stemTube(h, 0.06, 0.025).m); addLeaf(g, h * 0.3, 1.2, 0.4);
-          const shine = new T.MeshStandardMaterial({ color: lin(c), emissive: lin(c), emissiveIntensity: 0.45, roughness: 0.35 }); shine.userData.hex = c;
-          const hd = new T.Group(); hd.position.y = h; hd.rotation.x = 0.3; g.add(hd);
-          for (let i = 0; i < 5; i++) { const pv = new T.Group(); pv.rotation.y = i / 5 * 6.283; const pt = mesh(new T.ConeGeometry(0.06 * k, 0.24 * k, 4), shine); pt.rotation.x = Math.PI / 2; pt.scale.y = 1; pt.scale.x = 0.35; pt.position.z = 0.12 * k; pv.add(pt); hd.add(pv); }
-          const ctr = mesh(new T.SphereGeometry(0.04 * k, 12, 8), mat(acc || "#fff6c8")); hd.add(ctr);
-          const sp = glow(c, 0.7, 0.5); hd.add(sp);
-          top = h + 0.2; break;
-        }
-        case "dandelion": {
-          const h = 1.25 * k; g.add(stemTube(h, 0.08, 0.018).m);
-          for (let i = 0; i < 6; i++) { const lf = mesh(new T.SphereGeometry(1, 10, 6), mat(LEAF)); lf.scale.set(0.24, 0.015, 0.045); const a = i * 1.05; lf.position.set(Math.cos(a) * 0.14, 0.04, Math.sin(a) * 0.14); lf.rotation.y = -a; g.add(lf); }
-          const hd = new T.Group(); hd.position.y = h; g.add(hd);
-          const core = mesh(new T.SphereGeometry(0.03 * k, 10, 8), mat(acc || "#d8cfa8")); hd.add(core);
-          const n = 46, R0 = 0.16 * k;
-          for (let i = 0; i < n; i++) { const y = 1 - (i + 0.5) / n * 2, rr = Math.sqrt(1 - y * y), a = i * 2.39996; const dir = new T.Vector3(Math.cos(a) * rr, y, Math.sin(a) * rr);
-            const st = mesh(new T.CylinderGeometry(0.0025, 0.0025, R0, 3), mat("#f4f1e8")); st.position.copy(dir).multiplyScalar(R0 / 2); st.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), dir); hd.add(st);
-            const tuft = mesh(new T.SphereGeometry(0.014, 6, 4), mat(i % 3 ? "#ffffff" : c)); tuft.position.copy(dir).multiplyScalar(R0); hd.add(tuft); }
-          top = h + 0.22; break;
-        }
-        case "lotus": {
-          const pond = mesh(new T.CylinderGeometry(0.42, 0.42, 0.04, 30), new T.MeshStandardMaterial({ color: lin("#4f8fc4"), roughness: 0.12, metalness: 0.2 })); pond.position.y = 0.02; g.add(pond);
-          for (const [x, z, rr] of [[0.22, 0.12, 0.13], [-0.2, -0.14, 0.11], [0.02, -0.26, 0.09]]) { const pad = mesh(new T.CylinderGeometry(rr, rr, 0.012, 20, 1, false, 0.3, 5.8), mat("#5f9e5a")); pad.position.set(x, 0.045, z); g.add(pad); }
-          const hd = new T.Group(); hd.position.set(-0.04, 0.08, 0.04); hd.scale.setScalar(k); g.add(hd);
-          petalRing(hd, 8, 0.15, 0.06, c, 0.35, 0, 0, 0.03); petalRing(hd, 8, 0.13, 0.055, c, 0.75, 0.02, 0.39, 0.03); petalRing(hd, 6, 0.1, 0.045, acc || c, 1.15, 0.04, 0.2, 0.03);
-          const pod = mesh(new T.CylinderGeometry(0.05, 0.035, 0.05, 14), mat("#e6c23a")); pod.position.y = 0.05; hd.add(pod);
-          top = 0.45; break;
-        }
-        case "hydrangea": {
-          const h = 1.05 * k; g.add(stemTube(h, 0.05, 0.035).m);
-          for (const [y, a] of [[0.35, 0.4], [0.5, 2.5], [0.62, 4.4]]) addLeaf(g, h * y, a, 0.6);
-          const heads = [[0, h + 0.1, 0, 1]].concat(main.s >= 3 ? [[0.22, h * 0.82, 0.1, 0.75]] : []).concat(main.s >= 5 ? [[-0.2, h * 0.78, -0.08, 0.7]] : []);
-          heads.forEach(([x, y, z, sc2]) => { const hd = new T.Group(); hd.position.set(x, y, z); hd.scale.setScalar(sc2 * k); g.add(hd);
-            const n = 34, R0 = 0.2;
-            for (let i = 0; i < n; i++) { const yy = 1 - (i + 0.5) / n * 1.4, rr = Math.sqrt(Math.max(0, 1 - yy * yy)), a = i * 2.39996; const dir = new T.Vector3(Math.cos(a) * rr, yy, Math.sin(a) * rr).normalize();
-              const fl = new T.Group(); fl.position.copy(dir).multiplyScalar(R0); fl.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), dir);
-              const col = i % 4 === 0 && acc ? acc : c;
-              for (let q = 0; q < 4; q++) { const pt = mesh(new T.SphereGeometry(1, 8, 6), mat(col)); pt.scale.set(0.035, 0.008, 0.035); const qa = q * Math.PI / 2; pt.position.set(Math.cos(qa) * 0.03, 0, Math.sin(qa) * 0.03); fl.add(pt); }
-              hd.add(fl); } });
-          top = h + 0.35; break;
-        }
-        case "lavender": {
-          const n = 4 + main.s, lav = "#" + new T.Color(c).lerp(new T.Color("#9b7fd4"), 0.6).getHexString(), lavAcc = acc ? "#" + new T.Color(acc).lerp(new T.Color("#9b7fd4"), 0.4).getHexString() : lav;
-          for (let i = 0; i < n; i++) {
-            const a = i / n * 6.283 + r() * 0.4, lean = 0.08 + r() * 0.12, h = (0.9 + r() * 0.4) * k;
-            const end = new T.Vector3(Math.cos(a) * lean, h, Math.sin(a) * lean);
-            const s2 = stemTube(h, Math.cos(a) * 0.04, 0.009, end); s2.m.material = mat("#7f9a7a"); g.add(s2.m);
-            for (let q = 0; q < 9; q++) { const t2 = 0.68 + q * 0.04, pnt = s2.curve.getPoint(Math.min(1, t2)); const fl = mesh(new T.SphereGeometry(0.022 * (1 - q * 0.05), 8, 6), mat(i % 3 === 0 && acc ? lavAcc : lav)); fl.material.userData.hex = c; fl.scale.y = 1.3; fl.position.copy(pnt); g.add(fl); }
-          }
-          for (let i = 0; i < 6; i++) { const lf = mesh(new T.SphereGeometry(1, 8, 6), mat("#8fa88a")); lf.scale.set(0.012, 0.18, 0.012); const a = i * 1.05; lf.position.set(Math.cos(a) * 0.05, 0.15, Math.sin(a) * 0.05); lf.rotation.set(Math.sin(a) * 0.4, 0, -Math.cos(a) * 0.4); g.add(lf); }
-          top = 1.3 * k; break;
-        }
-        case "wildrose": {
-          const bushR = 0.2 * k, rose = "#" + new T.Color(c).lerp(new T.Color("#e8648a"), 0.6).getHexString(), roseAcc = acc ? "#" + new T.Color(acc).lerp(new T.Color("#e8648a"), 0.4).getHexString() : rose;
-          for (let i = 0; i < 5; i++) { const a = i * 1.26, b2 = mesh(new T.IcosahedronGeometry(bushR * (0.42 + (i % 3) * 0.08), 1), mat("#3f6b3f", { flatShading: true })); b2.position.set(Math.cos(a) * bushR * 0.55, bushR * (0.55 + (i % 2) * 0.3), Math.sin(a) * bushR * 0.55); g.add(b2); }
-          for (let i = 0; i < 14; i++) { const a = i * 2.39996, lf = mesh(new T.SphereGeometry(1, 8, 6), mat("#4f8a4f")); lf.scale.set(0.05, 0.012, 0.03); lf.position.set(Math.cos(a) * bushR * 0.95, bushR * (0.4 + (i % 5) * 0.22), Math.sin(a) * bushR * 0.95); lf.rotation.y = -a; g.add(lf); }
-          for (let i = 0; i < 10; i++) { const a = i * 2.3, th = mesh(new T.ConeGeometry(0.012, 0.06, 4), mat("#7a4a3a")); th.position.set(Math.cos(a) * bushR * 1.05, bushR * (0.5 + (i % 4) * 0.25), Math.sin(a) * bushR * 1.05); th.lookAt(new T.Vector3(Math.cos(a) * 3, th.position.y, Math.sin(a) * 3)); th.rotateX(Math.PI / 2); g.add(th); }
-          const nRose = 2 + Math.ceil(main.s / 2);
-          for (let i = 0; i < nRose; i++) { const a = i * 2.4 + 0.3, hd = new T.Group(); hd.position.set(Math.cos(a) * bushR * 0.95, bushR * (1.0 + (i % 2) * 0.35), Math.sin(a) * bushR * 0.95); hd.lookAt(new T.Vector3(Math.cos(a) * 3, hd.position.y + 1.5, Math.sin(a) * 3)); hd.rotateX(Math.PI / 2); g.add(hd);
-            petalRing(hd, 5, 0.085 * k, 0.07 * k, i === 0 && acc ? roseAcc : rose, 0.3, 0, 0, 0.022); hd.traverse(o => { if (o.material && o.material.userData.hex === rose) o.material.userData.hex = c; }); const ctr = mesh(new T.SphereGeometry(0.022, 8, 6), mat("#f6d36a")); ctr.position.y = 0.012; hd.add(ctr); }
-          top = bushR * 1.9 + 0.1; break;
-        }
-        default: {
-          g.add(stemTube(0.5, 0.03).m); addLeaf(g, 0.5, 0.3, 0.45); addLeaf(g, 0.5, 0.3 + Math.PI, 0.45, c);
-          top = 0.65;
-        }
-      }
-    }
-    if (stage === 3) { const fg = glow(c, 1.0, 0); fg.position.y = Math.max(0.3, top - 0.2); fg.userData.flowerGlow = true; g.add(fg); g.userData.glow = fg; }
-    if (stage === 3 && e.rare) {
-      const RAIN7 = ["#ff6b6b", "#ffa94d", "#ffe066", "#69db7c", "#4dabf7", "#748ffc", "#da77f2"]; let ri = 0;
-      const goldMat = side => new T.MeshStandardMaterial({ color: lin("#f3c64f"), metalness: 0.7, roughness: 0.28, emissive: lin("#7a5a00"), emissiveIntensity: 0.3, side });
-      const gm = { [T.FrontSide]: goldMat(T.FrontSide), [T.DoubleSide]: goldMat(T.DoubleSide) };
-      g.traverse(o => { if (o.isMesh && o.material && o.material.userData && o.material.userData.hex === c) {
-        if (e.rare === "gold") o.material = gm[o.material.side] || gm[T.FrontSide];
-        else { const m2 = o.material.clone(); m2.color = lin(RAIN7[ri++ % 7]); if (m2.emissive && m2.emissiveIntensity) m2.emissive = m2.color.clone(); o.material = m2; } } });
-      const tw = new T.Group(); tw.position.y = Math.max(0.3, top - 0.1);
-      for (let i = 0; i < 5; i++) { const sp = glow(e.rare === "gold" ? "#ffe9a0" : RAIN7[i], 0.18, 0.8); sp.userData.a = i / 5 * 6.283; tw.add(sp); }
-      g.add(tw); g.userData.twinkle = tw;
-    }
-    g.traverse(o => { o.userData.entryId = e.id; });
-    g.userData.top = top; g.userData.fam = fam;
-    return g;
-  }
-
-  // ---- birthday flowers (one shape per month) ----
-  function petalRing(parent, n, len, wid, col, tilt, y = 0, off = 0, thick = 0.03) {
-    for (let i = 0; i < n; i++) {
-      const pv = new T.Group(); pv.rotation.y = i / n * 6.283 + off; pv.position.y = y;
-      const pt = mesh(new T.SphereGeometry(1, 14, 8), mat(col)); pt.scale.set(wid, thick, len);
-      pt.position.z = len * 0.85; pv.rotation.x = 0; const lift = new T.Group(); lift.rotation.x = -tilt; lift.add(pt); pv.add(lift); parent.add(pv);
-    }
-  }
-  function bladeLeaf(g, h, ang, col) { const l = mesh(new T.SphereGeometry(1, 12, 8), mat(col || LEAF)); l.scale.set(0.045, h, 0.012); l.position.set(Math.cos(ang) * 0.06, h * 0.9, Math.sin(ang) * 0.06); l.rotation.set(Math.sin(ang) * 0.25, 0, -Math.cos(ang) * 0.25); g.add(l); }
-  function buildBirthFlower(m) {
-    const g = new T.Group(); let top = 1.2;
-    const head = (h, tiltX = 0.3) => { const hd = new T.Group(); hd.position.y = h; hd.rotation.x = tiltX; g.add(hd); return hd; };
-    switch (m) {
-      case 1: { // carnation
-        g.add(stemTube(1.0, 0.06).m); addLeaf(g, 0.35, 1, 0.5); addLeaf(g, 0.55, 4, 0.45);
-        const hd = head(1.0, 0.2);
-        [[13, 0.15, 0.55], [12, 0.13, 0.85], [11, 0.11, 1.1], [9, 0.09, 1.35], [7, 0.06, 1.5]].forEach(([n, l, t], i) => petalRing(hd, n, l, l * 0.6, i % 2 ? "#f6a8c2" : "#ef7fa6", t, i * 0.03, i * 0.35, 0.028));
-        top = 1.2; break;
-      }
-      case 2: { // violets: a clump of nodding flowers, buds and heart-shaped leaves
-        const DEEP = "#4f2d9a", MID = "#7350c4", LIGHT = "#9a7ad8", r2 = rnd("violet");
-        const heart = new T.Shape();
-        heart.moveTo(0, 0); heart.bezierCurveTo(-0.03, 0.04, -0.13, 0.08, -0.11, 0.16); heart.bezierCurveTo(-0.09, 0.22, -0.02, 0.22, 0, 0.17);
-        heart.bezierCurveTo(0.02, 0.22, 0.09, 0.22, 0.11, 0.16); heart.bezierCurveTo(0.13, 0.08, 0.03, 0.04, 0, 0);
-        const leafGeo = new T.ShapeGeometry(heart, 10); leafGeo.translate(0, -0.17, 0); // notch at the origin, tip pointing away
-        for (let i = 0; i < 10; i++) {
-          const a = i / 10 * 6.283 + r2() * 0.3, d = 0.05 + r2() * 0.08, sc = 0.7 + r2() * 0.35;
-          const pv = new T.Group(); pv.position.set(Math.cos(a) * d, 0.03 + r2() * 0.05, Math.sin(a) * d); pv.rotation.y = -a + Math.PI / 2;
-          const lf = mesh(leafGeo, mat(i % 3 ? "#3f7a45" : "#4f8a4f", { side: T.DoubleSide })); lf.scale.setScalar(sc); lf.rotation.x = -Math.PI / 2 - 0.35 - r2() * 0.3; pv.add(lf);
-          const pet = mesh(new T.CylinderGeometry(0.006, 0.008, 0.06, 5), mat(LEAF)); pet.position.y = -0.02; pv.add(pet);
-          g.add(pv);
-        }
-        const petal = (w, h, col) => { const m2 = mesh(new T.SphereGeometry(1, 16, 10), mat(col)); m2.scale.set(w, h, 0.012); return m2; };
-        function violet() {
-          const f = new T.Group();
-          for (const sx of [-1, 1]) { const up = petal(0.045, 0.07, DEEP); up.position.set(sx * 0.032, 0.055, -0.006); up.rotation.z = -sx * 0.35; f.add(up); }
-          for (const sx of [-1, 1]) { const sd = petal(0.055, 0.04, MID); sd.position.set(sx * 0.058, 0.0, 0.004); sd.rotation.z = sx * 0.25; f.add(sd);
-            const beard = mesh(new T.SphereGeometry(0.006, 8, 6), mat("#d9c8f5")); beard.position.set(sx * 0.026, 0.0, 0.015); f.add(beard); }
-          const low = petal(0.06, 0.06, MID); low.position.set(0, -0.045, 0.012); f.add(low);
-          const edge = petal(0.05, 0.045, LIGHT); edge.position.set(0, -0.06, 0.008); f.add(edge);
-          const throat = mesh(new T.SphereGeometry(0.015, 12, 8), mat("#efe6ff")); throat.scale.set(1, 1.3, 0.35); throat.position.set(0, -0.02, 0.022); f.add(throat);
-          for (const vx of [-0.016, 0, 0.016]) { const v = mesh(new T.BoxGeometry(0.0022, 0.03, 0.002), mat("#2e1760")); v.position.set(vx, -0.05, 0.026); v.rotation.z = vx * 8; f.add(v); }
-          const eye = mesh(new T.SphereGeometry(0.009, 8, 6), mat("#f6c431")); eye.position.set(0, -0.004, 0.03); f.add(eye);
-          return f;
-        }
-        const spots = [[0, 0, 0.5], [0.13, 0.06, 0.42], [-0.12, 0.08, 0.38], [0.05, -0.13, 0.45], [-0.08, -0.1, 0.34], [0.15, -0.07, 0.3]];
-        spots.forEach(([x, z, h], i) => {
-          const out = Math.atan2(z, x) || r2() * 6.28, dx = Math.cos(out), dz = Math.sin(out);
-          const tip = new T.Vector3(x + dx * 0.05, h, z + dz * 0.05);
-          const curve = new T.QuadraticBezierCurve3(new T.Vector3(x * 0.4, 0, z * 0.4), new T.Vector3(x, h * 1.12, z), tip);
-          g.add(mesh(new T.TubeGeometry(curve, 12, 0.007, 5, false), mat(LEAF)));
-          const f = violet(); f.position.copy(tip); f.position.y -= 0.03;
-          f.lookAt(new T.Vector3(tip.x + dx, tip.y - 0.25, tip.z + dz)); f.scale.setScalar(0.95 + (i % 3) * 0.08); g.add(f);
-        });
-        for (const [x, z, h] of [[-0.03, 0.14, 0.33], [0.1, 0.15, 0.27]]) {
-          const curve = new T.QuadraticBezierCurve3(new T.Vector3(x * 0.4, 0, z * 0.4), new T.Vector3(x, h * 1.1, z), new T.Vector3(x + 0.03, h, z + 0.03));
-          g.add(mesh(new T.TubeGeometry(curve, 10, 0.006, 5, false), mat(LEAF)));
-          const bud = mesh(new T.SphereGeometry(0.022, 12, 8), mat(DEEP)); bud.scale.set(0.8, 1.6, 0.8); bud.position.set(x + 0.03, h - 0.03, z + 0.03); bud.rotation.x = 0.5; g.add(bud);
-        }
-        top = 0.62; break;
-      }
-      case 3: { // daffodil
-        g.add(stemTube(1.05, 0.05).m); for (const a of [0, 2.1, 4.2]) bladeLeaf(g, 0.4, a);
-        const hd = head(1.05, 1.25);
-        petalRing(hd, 6, 0.17, 0.08, "#fffaf0", 0.12);
-        const cup = mesh(new T.CylinderGeometry(0.075, 0.05, 0.12, 18, 1, true), mat("#f6c431", { side: T.DoubleSide })); cup.position.y = 0.06; hd.add(cup);
-        top = 1.2; break;
-      }
-      case 4: { // daisy
-        g.add(stemTube(0.95, 0.08).m); addLeaf(g, 0.3, 2, 0.45);
-        const hd = head(0.95, 0.35);
-        petalRing(hd, 18, 0.17, 0.035, "#ffffff", 0.08); petalRing(hd, 14, 0.13, 0.03, "#f6f2fa", 0.2, 0.01, 0.2);
-        const c = mesh(new T.SphereGeometry(0.07, 16, 10), mat("#f2c230")); c.scale.y = 0.55; hd.add(c);
-        top = 1.1; break;
-      }
-      case 5: { // lily of the valley
-        for (const a of [0.4, 3.5]) { const l = mesh(new T.SphereGeometry(1, 14, 8), mat(LEAF)); l.scale.set(0.13, 0.42, 0.03); l.position.set(Math.cos(a) * 0.08, 0.38, Math.sin(a) * 0.08); l.rotation.y = -a; l.rotation.z = Math.cos(a) * 0.15; g.add(l); }
-        const end = new T.Vector3(0.35, 0.8, 0), s2 = stemTube(0.85, -0.1, 0.018, end); g.add(s2.m);
-        for (let i = 0; i < 6; i++) { const p = s2.curve.getPoint(0.4 + i * 0.1); const b = mesh(new T.SphereGeometry(0.045, 12, 10, 0, 6.29, 0, 2.1), mat("#fbfbf6", { side: T.DoubleSide })); b.rotation.x = Math.PI; b.position.set(p.x, p.y - 0.06, p.z); g.add(b); }
-        top = 0.95; break;
-      }
-      case 6: { // rose
-        g.add(stemTube(1.0, 0.05).m); addLeaf(g, 0.4, 1.4, 0.45); addLeaf(g, 0.6, 4.3, 0.4);
-        const hd = head(1.0, 0.15);
-        const bud = mesh(new T.SphereGeometry(0.06, 14, 10), mat("#b81f37")); bud.scale.y = 1.4; bud.position.y = 0.06; hd.add(bud);
-        [[5, 0.07, 1.35], [6, 0.1, 1.1], [7, 0.13, 0.8], [8, 0.15, 0.5]].forEach(([n, l, t], i) => petalRing(hd, n, l, l * 0.8, i < 2 ? "#c8283f" : "#d63a4f", t, 0.02 - i * 0.01, i * 0.5, 0.03));
-        top = 1.2; break;
-      }
-      case 7: { // water lily on a little pond
-        const pond = mesh(new T.CylinderGeometry(0.55, 0.55, 0.04, 32), new T.MeshStandardMaterial({ color: lin("#4f8fc4"), roughness: 0.15, metalness: 0.2 })); pond.position.y = 0.02; g.add(pond);
-        for (const [x, z, r] of [[0.25, 0.15, 0.16], [-0.22, -0.18, 0.13], [0.05, -0.3, 0.1]]) { const pad = mesh(new T.CylinderGeometry(r, r, 0.015, 20, 1, false, 0.3, 5.8), mat("#5f9e5a")); pad.position.set(x, 0.05, z); g.add(pad); }
-        const hd = new T.Group(); hd.position.set(-0.05, 0.06, 0.05); g.add(hd);
-        petalRing(hd, 8, 0.13, 0.05, "#f7b8cf", 0.35); petalRing(hd, 8, 0.11, 0.045, "#f4a0bf", 0.75, 0.02, 0.4);
-        const c = mesh(new T.SphereGeometry(0.04, 12, 8), mat("#f2c230")); c.position.y = 0.04; hd.add(c);
-        top = 0.4; break;
-      }
-      case 8: { // gladiolus
-        g.add(stemTube(1.45, 0.04).m); for (const a of [0.5, 2.6, 4.7]) bladeLeaf(g, 0.6, a);
-        for (let i = 0; i < 7; i++) { const y = 0.75 + i * 0.1, sz = 0.11 - i * 0.008, side = i % 2 ? 1 : -1;
-          const hd = new T.Group(); hd.position.set(side * 0.05, y, 0); hd.rotation.set(1.2, 0, side * 0.5); g.add(hd);
-          petalRing(hd, 5, sz, sz * 0.7, i % 2 ? "#f06a4a" : "#f4825f", 0.4, 0, i); }
-        top = 1.55; break;
-      }
-      case 9: { // aster
-        g.add(stemTube(0.95, 0.06).m); addLeaf(g, 0.4, 1.8, 0.4);
-        const hd = head(0.95, 0.3);
-        petalRing(hd, 26, 0.16, 0.022, "#9a6ad6", 0.1); petalRing(hd, 20, 0.12, 0.02, "#b48ae6", 0.3, 0.01, 0.15);
-        const c = mesh(new T.SphereGeometry(0.06, 14, 10), mat("#f2c230")); c.scale.y = 0.6; hd.add(c);
-        top = 1.1; break;
-      }
-      case 10: { // cosmos
-        const s2 = stemTube(1.3, 0.15, 0.022); g.add(s2.m);
-        for (let i = 0; i < 4; i++) { const p = s2.curve.getPoint(0.2 + i * 0.15); const l = mesh(new T.SphereGeometry(1, 8, 6), mat(LEAF)); l.scale.set(0.16, 0.01, 0.015); l.position.copy(p); l.rotation.y = i * 1.7; g.add(l); }
-        const hd = head(1.3, 0.4);
-        petalRing(hd, 8, 0.17, 0.085, "#f39ac4", 0.1);
-        const c = mesh(new T.SphereGeometry(0.045, 12, 8), mat("#e0a020")); c.scale.y = 0.6; hd.add(c);
-        top = 1.45; break;
-      }
-      case 11: { // chrysanthemum pompom
-        g.add(stemTube(0.9, 0.05).m); addLeaf(g, 0.35, 0.7, 0.45); addLeaf(g, 0.55, 3.6, 0.4);
-        const hd = head(0.95, 0.15);
-        [[16, 0.13, 0.15], [15, 0.115, 0.45], [14, 0.1, 0.75], [12, 0.085, 1.05], [9, 0.065, 1.35]].forEach(([n, l, t], i) => petalRing(hd, n, l, 0.03, i % 2 ? "#f2c230" : "#f5d34f", t, i * 0.02, i * 0.25, 0.022));
-        top = 1.15; break;
-      }
-      default: { // poinsettia
-        for (let i = 0; i < 6; i++) { const l = mesh(new T.SphereGeometry(1, 12, 8), mat(LEAF)); l.scale.set(0.2, 0.02, 0.08); const pv = new T.Group(); pv.rotation.y = i * 1.05; l.position.x = 0.18; l.rotation.z = -0.25; pv.position.y = 0.35; pv.add(l); g.add(pv); }
-        g.add(stemTube(0.45, 0.02, 0.04).m);
-        const hd = head(0.48, 0);
-        petalRing(hd, 6, 0.2, 0.07, "#d32b2b", 0.12); petalRing(hd, 6, 0.14, 0.055, "#e03a35", 0.3, 0.02, 0.5);
-        for (let i = 0; i < 5; i++) { const d = mesh(new T.SphereGeometry(0.018, 8, 6), mat("#f2c230")); d.position.set(Math.cos(i * 1.26) * 0.03, 0.04, Math.sin(i * 1.26) * 0.03); hd.add(d); }
-        top = 0.7;
-      }
-    }
-    g.userData.top = top; return g;
-  }
+  function buildBirthFlower(m) { return buildBirthFlower3D(K, m); }
   let birthIslet = null, birthKey = "", sparkles = null;
   function syncBirthIslet() {
     const key = hasBirthday() ? `${profile.birthMonth}|${islandR}` : "";
@@ -654,101 +243,7 @@ function initGarden3D() {
 
   // ---- decorations bought with petals ----
   const decorObstacles = [], decorGlows = [], chimeStrips = [], pinwheels = []; let decorGroup = null, decorKey = "", chimeStrip = null, pinwheel = null;
-  function buildDecor(id) {
-    const g = new T.Group(); let r = 0.35;
-    switch (id) {
-      case "mushroom":
-        [[0, 0, 0.32, 0.17], [0.2, 0.1, 0.22, 0.12], [-0.15, 0.14, 0.18, 0.1], [0.08, -0.17, 0.14, 0.08]].forEach(([x, z, h, cr]) => {
-          const st = mesh(new T.CylinderGeometry(cr * 0.35, cr * 0.45, h, 12), mat("#f4ecdc")); st.position.set(x, h / 2, z); g.add(st);
-          const cap = mesh(new T.SphereGeometry(cr, 18, 10, 0, 6.29, 0, Math.PI / 2), mat("#d6483c")); cap.position.set(x, h - 0.01, z); cap.scale.y = 0.75; g.add(cap);
-          for (let i = 0; i < 5; i++) { const dt = mesh(new T.SphereGeometry(cr * 0.12, 8, 6), mat("#fffaf0")); const a = i * 1.26; dt.position.set(x + Math.cos(a) * cr * 0.6, h + cr * 0.42, z + Math.sin(a) * cr * 0.6); g.add(dt); }
-        }); r = 0.3; break;
-      case "cairn":
-        [[0.34, 0.11], [0.27, 0.1], [0.21, 0.09], [0.15, 0.08], [0.1, 0.07]].reduce((y, [w, hh], i) => { const st = mesh(new T.SphereGeometry(w, 14, 8), mat(STONE)); st.scale.y = hh / w * 1.6; st.position.set((i % 2 ? 0.02 : -0.02), y + hh * 0.8, 0); st.rotation.y = i; g.add(st); return y + hh * 1.55; }, 0);
-        r = 0.35; break;
-      case "chime": {
-        const post = mesh(new T.CylinderGeometry(0.035, 0.045, 1.5, 8), mat(BARK)); post.position.y = 0.75; g.add(post);
-        const arm = mesh(new T.BoxGeometry(0.4, 0.04, 0.04), mat(BARK)); arm.position.set(0.18, 1.45, 0); g.add(arm);
-        chimeStrip = new T.Group(); chimeStrip.position.set(0.34, 1.43, 0);
-        const bell = mesh(new T.SphereGeometry(0.08, 16, 10, 0, 6.29, 0, 1.9), mat("#b98a3c", { metalness: 0.6, roughness: 0.35, side: T.DoubleSide })); bell.position.y = -0.08; chimeStrip.add(bell);
-        const strip = mesh(new T.BoxGeometry(0.07, 0.24, 0.005), mat("#f4f0e4")); strip.position.y = -0.28; chimeStrip.add(strip);
-        const tie = mesh(new T.CylinderGeometry(0.004, 0.004, 0.12, 4), mat("#9a2c2c")); tie.position.y = -0.14; chimeStrip.add(tie);
-        g.add(chimeStrip); chimeStrips.push(chimeStrip); g.userData.chime = true; r = 0.25; break;
-      }
-      case "lamp": {
-        const post = mesh(new T.CylinderGeometry(0.03, 0.04, 1.3, 8), mat(BARK)); post.position.y = 0.65; g.add(post);
-        const arm = mesh(new T.BoxGeometry(0.32, 0.035, 0.035), mat(BARK)); arm.position.set(0.14, 1.27, 0); g.add(arm);
-        const lmat = new T.MeshStandardMaterial({ color: lin("#e2553f"), emissive: lin("#ff8a4c"), emissiveIntensity: 0, roughness: 0.7 });
-        const paper = mesh(new T.SphereGeometry(0.15, 18, 12), lmat); paper.scale.y = 1.25; paper.position.set(0.28, 1.02, 0); g.add(paper);
-        for (const y of [0.83, 1.21]) { const rim = mesh(new T.CylinderGeometry(0.08, 0.08, 0.03, 12), mat("#3a2a20")); rim.position.set(0.28, y, 0); g.add(rim); }
-        const gl = glow("#ffb070", 1.8, 0); gl.position.set(0.28, 1.02, 0); g.add(gl);
-        decorGlows.push({ sprite: gl, mat: lmat }); r = 0.25; break;
-      }
-      case "bench": {
-        for (let i = 0; i < 3; i++) { const b = mesh(new T.BoxGeometry(0.9, 0.035, 0.09), mat(i % 2 ? "#9c6b45" : "#a87650")); b.position.set(0, 0.36, -0.1 + i * 0.1); g.add(b); }
-        for (let i = 0; i < 2; i++) { const b = mesh(new T.BoxGeometry(0.9, 0.08, 0.03), mat("#9c6b45")); b.position.set(0, 0.55 + i * 0.12, -0.17); b.rotation.x = -0.12; g.add(b); }
-        for (const x of [-0.38, 0.38]) for (const z of [-0.12, 0.12]) { const l = mesh(new T.BoxGeometry(0.05, 0.36, 0.05), mat("#6b4f3a")); l.position.set(x, 0.18, z); g.add(l); }
-        for (const x of [-0.38, 0.38]) { const l = mesh(new T.BoxGeometry(0.05, 0.4, 0.04), mat("#6b4f3a")); l.position.set(x, 0.56, -0.17); g.add(l); }
-        r = 0.5; break;
-      }
-      case "birdhouse": {
-        const post = mesh(new T.CylinderGeometry(0.035, 0.045, 1.1, 8), mat(BARK)); post.position.y = 0.55; g.add(post);
-        const box = mesh(new T.BoxGeometry(0.26, 0.26, 0.24), mat("#e9d6b0")); box.position.y = 1.22; g.add(box);
-        const roof = mesh(new T.ConeGeometry(0.25, 0.18, 4), mat("#5d7fa6")); roof.position.y = 1.44; roof.rotation.y = Math.PI / 4; g.add(roof);
-        const hole = mesh(new T.CircleGeometry(0.045, 16), mat("#3a2a20")); hole.position.set(0, 1.24, 0.121); g.add(hole);
-        const perch = mesh(new T.CylinderGeometry(0.01, 0.01, 0.08, 6), mat(BARK)); perch.rotation.x = Math.PI / 2; perch.position.set(0, 1.16, 0.15); g.add(perch);
-        const bird = new T.Group(); bird.position.set(0.05, 1.53, 0.02);
-        const bb = mesh(new T.SphereGeometry(0.06, 14, 10), mat("#7aa6c8")); bb.scale.set(1, 0.9, 1.3); bird.add(bb);
-        const bh = mesh(new T.SphereGeometry(0.04, 12, 8), mat("#7aa6c8")); bh.position.set(0, 0.04, 0.06); bird.add(bh);
-        const beak = mesh(new T.ConeGeometry(0.012, 0.04, 6), mat("#f2b33c")); beak.rotation.x = Math.PI / 2; beak.position.set(0, 0.04, 0.11); bird.add(beak);
-        const belly = mesh(new T.SphereGeometry(0.045, 10, 8), mat("#f3e2c6")); belly.position.set(0, -0.01, 0.04); bird.add(belly);
-        g.add(bird); g.userData.bird = bird; r = 0.25; break;
-      }
-      case "pond": {
-        const water = mesh(new T.CylinderGeometry(0.55, 0.55, 0.04, 36), new T.MeshStandardMaterial({ color: lin("#4f8fc4"), roughness: 0.1, metalness: 0.25 }), false); water.position.y = 0.01; g.add(water);
-        for (let i = 0; i < 14; i++) { const a = i / 14 * 6.283; const st = mesh(new T.SphereGeometry(0.09 + (i % 3) * 0.02, 10, 6), mat(STONE)); st.scale.y = 0.55; st.position.set(Math.cos(a) * 0.6, 0.03, Math.sin(a) * 0.6); g.add(st); }
-        for (const [x, z, rr] of [[0.2, 0.1, 0.12], [-0.18, -0.15, 0.1]]) { const pad = mesh(new T.CylinderGeometry(rr, rr, 0.012, 20, 1, false, 0.3, 5.8), mat("#5f9e5a")); pad.position.set(x, 0.04, z); g.add(pad); }
-        const lot = new T.Group(); lot.position.set(0.2, 0.05, 0.1); petalRing(lot, 7, 0.06, 0.025, "#f7b8cf", 0.6); g.add(lot);
-        r = 0.65; break;
-      }
-      case "pinwheel": {
-        const stick = mesh(new T.CylinderGeometry(0.02, 0.025, 1.1, 8), mat("#f3efe6")); stick.position.y = 0.55; g.add(stick);
-        pinwheel = new T.Group(); pinwheel.position.set(0, 1.08, 0.05);
-        ["#ef5a5a", "#f6c431", "#5ab27a", "#5a8fe0"].forEach((col, i) => {
-          const bl = new T.Shape(); bl.moveTo(0, 0); bl.lineTo(0.22, 0.02); bl.lineTo(0.02, 0.2); bl.lineTo(0, 0);
-          const m2 = mesh(new T.ShapeGeometry(bl), mat(col, { side: T.DoubleSide })); m2.rotation.z = i * Math.PI / 2; pinwheel.add(m2);
-        });
-        const pin = mesh(new T.SphereGeometry(0.03, 10, 8), mat("#ffffff")); pin.position.z = 0.01; pinwheel.add(pin);
-        g.add(pinwheel); pinwheels.push(pinwheel); r = 0.2; break;
-      }
-      case "startree": {
-        const trunk = mesh(new T.CylinderGeometry(0.06, 0.1, 1.2, 8), mat("#5d4a6e")); trunk.position.y = 0.6; g.add(trunk);
-        for (const [x, y, z, rr] of [[0, 1.35, 0, 0.45], [0.28, 1.15, 0.1, 0.3], [-0.25, 1.2, -0.1, 0.32], [0.05, 1.6, -0.05, 0.3]]) {
-          const cn = mesh(new T.IcosahedronGeometry(rr, 1), mat("#3d4f8a", { flatShading: true })); cn.position.set(x, y, z); g.add(cn);
-        }
-        const starMat = new T.MeshStandardMaterial({ color: lin("#fff3b0"), emissive: lin("#ffd95a"), emissiveIntensity: 0.6, roughness: 0.4 });
-        for (let i = 0; i < 9; i++) {
-          const a = i * 2.4, yy = 1.05 + (i % 4) * 0.17, rr = 0.42 - (i % 4) * 0.05;
-          const st = mesh(new T.OctahedronGeometry(0.05, 0), starMat); st.position.set(Math.cos(a) * rr, yy, Math.sin(a) * rr); g.add(st);
-          const gl = glow("#ffe27a", 0.45, 0.25); gl.position.copy(st.position); g.add(gl); decorGlows.push({ sprite: gl, mat: starMat, always: true });
-        }
-        r = 0.4; break;
-      }
-      case "arch": {
-        const arc = mesh(new T.TorusGeometry(0.62, 0.035, 8, 36, Math.PI), mat("#8a6a4a")); arc.position.y = 0.9; g.add(arc);
-        for (const x of [-0.62, 0.62]) { const leg = mesh(new T.CylinderGeometry(0.035, 0.04, 0.9, 8), mat("#8a6a4a")); leg.position.set(x, 0.45, 0); g.add(leg); }
-        const cols = ["#f4a6c0", "#fff1f5", "#f6c431", "#c9a0e6", "#ff8c69"];
-        for (let i = 0; i < 26; i++) {
-          const t = i / 25, a = Math.PI * t, onLeg = i < 4 || i > 21;
-          const px = onLeg ? (i < 4 ? -0.62 : 0.62) : Math.cos(a) * 0.62, py = onLeg ? 0.25 + (i < 4 ? i : 25 - i) * 0.17 : 0.9 + Math.sin(a) * 0.62;
-          const f = mesh(new T.SphereGeometry(0.05 + (i % 3) * 0.012, 10, 8), mat(cols[i % cols.length])); f.position.set(px + (Math.random() - 0.5) * 0.04, py, (i % 2 ? 0.04 : -0.04)); g.add(f);
-          if (i % 2) { const lf = mesh(new T.SphereGeometry(1, 8, 6), mat(LEAF)); lf.scale.set(0.06, 0.015, 0.035); lf.position.set(px, py - 0.05, i % 4 ? 0.06 : -0.06); g.add(lf); }
-        }
-        g.userData.archLegs = true; r = 0; break;
-      }
-    }
-    g.userData.r = r; return g;
-  }
+  function buildDecor(id) { return buildDecor3D(K, id, { decorGlows, chimeStrips, pinwheels }); }
   const baseYaw = (id, a) => id === "arch" ? -a + Math.PI / 2 : -a - Math.PI / 2;
   function syncDecor() {
     const { placed } = decorState();
@@ -1189,9 +684,18 @@ function initGarden3D() {
       bub.style.visibility = v.z < 1 ? "visible" : "hidden";
     }
   }
+  // ---- seasonal events ----
+  let eventDeco = null, eventKey = "";
+  function syncEvent() {
+    const k = eventNow(), key = `${k}|${islandR}`;
+    if (key === eventKey) return; eventKey = key;
+    if (eventDeco) { world.remove(eventDeco.group); eventDeco = null; }
+    if (k) { eventDeco = buildEvent3D(K, k, islandR); world.add(eventDeco.group); }
+  }
   function gardenerTalk() {
     const bub = $("g-bubble"); bub.textContent = "";
     const b = document.createElement("b"); b.textContent = "정원지기 "; bub.append(b, document.createTextNode(gardenerLine()));
+    const talk = document.createElement("button"); talk.type = "button"; talk.className = "talk"; talk.textContent = "💬 이야기하기"; talk.onclick = () => { bub.hidden = true; openChat(); }; bub.append(talk);
     bub.hidden = false; bub.style.opacity = 1; gState.bubbleUntil = performance.now() + 6000;
     gState.mode = "stay"; gState.until = performance.now() + 4000;
     const dx = camera.position.x - gState.x, dz = camera.position.z - gState.z; gState.yaw = Math.atan2(dx, dz); gState.target = gState.target || { x: gState.x, z: gState.z }; delete gState.target.fx;
@@ -1304,6 +808,7 @@ function initGarden3D() {
     syncBirthIslet();
     syncDecor();
     syncHunt();
+    syncEvent();
     const seen = new Set();
     sorted.forEach((e, i) => {
       seen.add(e.id);
@@ -1593,6 +1098,7 @@ function initGarden3D() {
     stepWeather(dt, now);
     stepCritters(dt, now);
     stepGardener(dt, now);
+    if (eventDeco) eventDeco.step(now, SKIES[skyKey].night, reduce.matches);
     if (!reduce.matches) for (const pw of pinwheels) pw.rotation.z -= dt * 2.4;
     if (chimeStrips.length) { const kick = chimeKick ? Math.max(0, 1 - (now - chimeKick) / 2500) : 0; chimeStrips.forEach((cs, i) => { cs.rotation.z = (reduce.matches ? 0 : Math.sin(now / 700 + i) * 0.12) + Math.sin(now / 120) * 0.35 * kick; }); }
     if (!reduce.matches) {

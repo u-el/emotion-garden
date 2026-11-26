@@ -16,7 +16,7 @@ fs.writeFileSync(FIXTURE, JSON.stringify({ entries: titles.map((t, i) => ({ id: 
   const p = await b.newPage({ viewport: { width: 420, height: 880 } });
   const errs = []; p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error' && !/ERR_|Failed to load resource/.test(m.text())) errs.push('console: ' + m.text()); });
   await p.route('https://cdn.jsdelivr.net/npm/three@0.128.0/**', r => { const u = new URL(r.request().url()); r.fulfill({ contentType: 'application/javascript', body: fs.readFileSync(path.join(THREE_DIR, u.pathname.replace('/npm/three@0.128.0', ''))) }); });
-  await p.route('**/js/10-garden-3d.js', async r => { const res = await r.fetch(); let t = await res.text(); t = t.replace('  return { update, tip: showTip', '  window.__dbg = { camera, controls, renderer, walker, items: () => huntItems, whale, R: () => islandR, decor: () => decorGroup };\n  return { update, tip: showTip'); r.fulfill({ response: res, body: t, contentType: 'application/javascript' }); });
+  await p.route('**/js/14-garden-3d.js', async r => { const res = await r.fetch(); let t = await res.text(); t = t.replace('  return { update, tip: showTip', '  window.__dbg = { camera, controls, renderer, walker, items: () => huntItems, whale, R: () => islandR, decor: () => decorGroup };\n  return { update, tip: showTip'); r.fulfill({ response: res, body: t, contentType: 'application/javascript' }); });
   await p.route('https://fonts.googleapis.com/**', r => r.abort()); await p.route('https://fonts.gstatic.com/**', r => r.abort());
   let fails = 0;
   const ok = (label, cond, extra = '') => (cond || fails++, console.log(`${cond ? 'PASS' : 'FAIL'}  ${label}${extra ? '  · ' + extra : ''}`));

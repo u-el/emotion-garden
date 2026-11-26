@@ -81,6 +81,7 @@
     </div>
     <div class="garden-meta">
       <span class="weather-chip" id="weather-chip" hidden></span>
+      <span class="meta-links"><button type="button" class="link-btn" id="chat-btn">💬 정원지기와 이야기</button><button type="button" class="link-btn" id="event-btn">🎉 행사 미리보기</button></span>
       <label class="vol" id="music-vol-wrap" hidden><span class="label">소리</span><input type="range" id="music-vol" min="0" max="100" value="60" aria-label="음악 소리 크기"></label>
     </div>
     <span class="msg" id="garden-msg" role="status"></span>
@@ -309,6 +310,19 @@
   </div>
 </dialog>
 
+<dialog id="chat-dlg" aria-labelledby="chat-title">
+  <div class="sheet chat-sheet">
+    <div class="panel-head"><h3 id="chat-title">정원지기와 이야기</h3><button type="button" class="sheet-x" id="chat-x" aria-label="닫기">✕</button></div>
+    <div class="chat-log" id="chat-log" aria-live="polite"></div>
+    <div class="safety" id="chat-safety" hidden></div>
+    <div class="chat-form">
+      <textarea id="chat-input" rows="2" maxlength="300" placeholder="정원지기에게 하고 싶은 말을 적어 보세요" aria-label="정원지기에게 보낼 말"></textarea>
+      <button type="button" class="primary" id="chat-send">보내기</button>
+    </div>
+    <div class="chat-foot"><span class="hint" id="chat-note"></span><button type="button" class="link-btn" id="chat-reset">처음부터</button></div>
+  </div>
+</dialog>
+
 <dialog id="shop">
   <div class="sheet">
     <div class="panel-head"><h3>정원 꾸미기</h3><span class="seed-name" id="shop-balance"></span></div>
@@ -343,8 +357,13 @@
 <script src="js/07-extras.js"></script>
 <script src="js/08-weekly.js"></script>
 <script src="js/09-garden-2d.js"></script>
-<script src="js/10-garden-3d.js"></script>
-<script src="js/11-music.js"></script>
-<script src="js/12-main.js"></script>
+<script src="js/10-3d-kit.js"></script>
+<script src="js/11-3d-plants.js"></script>
+<script src="js/12-3d-decor.js"></script>
+<script src="js/13-3d-events.js"></script>
+<script src="js/14-garden-3d.js"></script>
+<script src="js/15-music.js"></script>
+<script src="js/16-chat.js"></script>
+<script src="js/17-main.js"></script>
 </body>
 </html>

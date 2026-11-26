@@ -161,3 +161,4 @@ new MutationObserver(render).observe(document.documentElement, { attributes: tru
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
 render();
 initStore();
+greetEvent();
